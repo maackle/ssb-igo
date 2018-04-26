@@ -1,0 +1,16 @@
+{
+  "name": "fuzzytime-frontend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "pulp build -I src --to dist/bundle.js -m Main",
+    "watch": "pscid",
+    "start": "npm run build && parcel index.html"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ssb-client": "^4.5.7"
+  }
+}
