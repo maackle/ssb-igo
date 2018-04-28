@@ -1,14 +1,13 @@
 var ssbClient = require('ssb-client')
 var ssbKeys = require('ssb-keys')
 
-exports._getClient = function (error, success) {
+
+exports._getClient = function (config) {
+  return function (error, success) {
     console.log("getClient outer")
-    var path = "/Users/michael/.ssb-test"
-    var config = {
-      keys: ssbKeys.loadOrCreateSync(path + "/secret"),
-      path: path,
-      caps: {shs: "GVZDyNf1TrZuGv3W5Dpef0vaITW1UqOUO3aWLNBp+7A="},
-      host: "localhost"
+    config.caps = {
+      shs: config.shs,
+      sign: config.sign,
     }
     console.log(config)
     ssbClient(
@@ -18,11 +17,13 @@ exports._getClient = function (error, success) {
         console.log("getClient inner")
         if (err) error(err)
         else success(client)
-      })
+      }
+    )
     return function (ce, cre, cs) {
       cs()
     }
   }
+}
 
 exports._publish = function (client, data) {
   console.log("publish outer")

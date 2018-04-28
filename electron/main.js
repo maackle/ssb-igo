@@ -46,6 +46,7 @@ function startSbot () {
     path: path,
     keys: keys,
     host: "localhost",
+    port: 8088,
     master: keys.id,
     caps: {
       shs: process.env.SBOT_SHS || "GVZDyNf1TrZuGv3W5Dpef0vaITW1UqOUO3aWLNBp+7A=",

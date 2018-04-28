@@ -4,3 +4,4 @@ dist/
 .cache/
 .psc-package/
 .tags*
+.psc-ide-port
