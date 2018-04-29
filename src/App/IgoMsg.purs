@@ -49,7 +49,9 @@ derive instance genericStoneColor :: Generic StoneColor
 derive instance genericBoardPosition :: Generic BoardPosition
 
 clientConfig = liftEff $ do
-  cfg <- defaultConfig $ Just "/Users/michael/.ssb-test"
+  cfg <- defaultConfig $ Just
+            { path: "/Users/michael/.ssb-test"
+            , keys: Nothing }
   pure cfg { port = 8088, shs = "GVZDyNf1TrZuGv3W5Dpef0vaITW1UqOUO3aWLNBp+7A=" }
 
 publishMsg :: ∀ eff. IgoMsg -> SF eff Unit

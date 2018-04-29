@@ -18,13 +18,13 @@ foreign import data ClientF :: Type
 type SF f a = Aff (ssb :: SSB | f) a
 
 foreign import _getClient :: ∀ f. Config -> EffFnAff (ssb :: SSB | f) ClientF
-foreign import _publish :: ∀ f. Fn2 ClientF Json (EffFnAff (ssb :: SSB | f) Json)
+foreign import _publish :: ∀ f. ClientF -> Json -> (EffFnAff (ssb :: SSB | f) Json)
 
 getClient :: ∀ f. Config -> SF f ClientF
 getClient config = fromEffFnAff $ _getClient config
 
 publish :: ∀ f. ClientF -> Json -> SF f Json
-publish client msg = fromEffFnAff (runFn2 _publish client msg)
+publish client msg = fromEffFnAff $ _publish client msg
 
 -- getClient :: SsbEff ClientInstance
 -- getClient
