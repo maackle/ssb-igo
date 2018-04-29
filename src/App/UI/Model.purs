@@ -1,4 +1,4 @@
-module App.Model where
+module App.UI.Model where
 
 
 import Data.DateTime (DateTime(..))

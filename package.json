@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "pulp build -I src --to dist/bundle.js -m Main",
-    "watch": "pscid",
+    "build": "pulp build -I src --to dist/bundle.js -m App.UI.Main",
+    "watch": "pulp -w build -I src -m App.UI.Main",
     "start": "npm run build && parcel index.html"
   },
   "author": "",

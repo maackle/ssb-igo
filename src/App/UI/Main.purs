@@ -1,17 +1,21 @@
-module Main where
+module App.UI.Main where
 
 import Prelude
 
-import App.Action (Action(..))
-import App.Effect (Effect(..), runEffect)
 import App.IgoMsg as Msg
-import App.Model (Model, initialModel)
-import App.View (render)
+import App.UI.Action (Action(..))
+import App.UI.Action (Action(..))
+import App.UI.Effect (Effect(..), runEffect)
+import App.UI.Model (Model, initialModel)
+import App.UI.Sub (Sub(..))
+import App.UI.Sub as Sub
+import App.UI.View (render)
 import Control.Monad.Aff (Aff, Error)
 import Control.Monad.Aff.Class (liftAff)
 import Control.Monad.Aff.Console (CONSOLE, log)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (error)
+import Control.Monad.Eff.Console (error, log) as Eff
+import Control.Monad.Eff.Timer (TIMER, setInterval)
 import Control.MonadZero (guard)
 import DOM (DOM)
 import DOM.Classy.Element (fromElement) as DOM
@@ -22,6 +26,7 @@ import DOM.HTML.HTMLElement (focus) as DOM
 import DOM.HTML.Window (localStorage) as DOM
 import DOM.Node.Types (Element) as DOM
 import DOM.WebStorage.Storage (getItem, setItem) as DOM
+import Data.Argonaut (Json, jsonNull)
 import Data.Array as Array
 import Data.Const (Const)
 import Data.Either (hush)
@@ -35,7 +40,7 @@ import Spork.App as App
 import Spork.Html as H
 import Spork.Html.Elements.Keyed as K
 import Spork.Interpreter (Interpreter(..), liftNat, merge, never, throughAff)
-import Ssb.Client (SSB)
+import Ssb.Config (SSB)
 
 
 update ∷ Model -> Action -> App.Transition Effect Model Action
@@ -47,12 +52,18 @@ update model = case _ of
       effects = App.lift (Publish (Msg.demoMsg) Noop)
     in
       { model, effects }
+  ReduceIgoMessage json ->
+    { model, effects: App.lift (Log "hahaha" Noop) }
 
-app ∷ App.App Effect (Const Void) Model Action
+subs :: Model -> App.Batch Sub Action
+subs _ =
+  App.lift $ ReceiveSsbMessage ReduceIgoMessage
+
+app ∷ App.App Effect Sub Model Action
 app =
   { render
   , update
-  , subs: const mempty
+  , subs
   , init: App.purely model
   }
   where
@@ -64,10 +75,10 @@ routeAction = case _ of
   "/"         -> Nothing
   _           -> Nothing
 
-type FX = App.AppEffects (ssb :: SSB, console :: CONSOLE)
+type FX = App.AppEffects (ssb :: SSB, console :: CONSOLE, timer :: TIMER)
 
 handleException :: ∀ f. Error -> Eff (console :: CONSOLE | f) Unit
-handleException e = error $ show e
+handleException e = Eff.error $ show e
 
 main ∷ Eff (FX) Unit
 main = do
@@ -76,7 +87,14 @@ main = do
     effectInterpreter :: ∀ i. Interpreter (Eff FX) Effect i
     effectInterpreter = (throughAff runEffect handleException)
 
-    interpreter = (effectInterpreter `merge` never)
+    dummyDrain ms fn = setInterval ms $ do
+      Eff.log "dummyDrain tick"
+      fn jsonNull
+      pure unit
+
+    setupListener fn = dummyDrain 4000 fn *> pure unit
+
+    interpreter = (effectInterpreter `merge` Sub.interpreter setupListener)
 
   inst ←
     App.makeWithSelector
