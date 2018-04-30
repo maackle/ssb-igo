@@ -1,7 +1,7 @@
 const home = require('os-homedir')
 const ssbKeys = require('ssb-keys')
 
-exports._defaultConfig = ({keys, path}={}) => () => {
+exports._defaultConfig = path => keys => () => {
   if (!path) path = home() || 'browser'
   if (!keys) keys = ssbKeys.loadOrCreateSync(path + "/secret");
   return {
@@ -11,5 +11,6 @@ exports._defaultConfig = ({keys, path}={}) => () => {
     sign: null,
     host: "localhost",
     port: 8008,
+    manifest: null,
   }
 }

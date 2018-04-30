@@ -18,13 +18,13 @@ import Ssb.PullStream (PullStream)
 
 ssbIgoPlugin =
   { init: \sbot -> unsafePerformEff $ init sbot
-  , name: "ssbIgoDb"
+  , name: "ssbIgo"
   , version: "0.1"
   , manifest
   }
   where
     init sbot = do
-      view <- flumeUse sbot "ssb-igo-index" flumeReducer
+      view <- flumeUse sbot "ssb-igo" flumeReducer
       log "OK!!"
       stream <- liveStream view
       pure { streamDb: const stream }

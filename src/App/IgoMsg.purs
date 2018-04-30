@@ -2,6 +2,7 @@ module App.IgoMsg where
 
 import Prelude
 
+import App.Common (clientConfig, getClient')
 import App.Utils (toObject')
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (CONSOLE, info)
@@ -48,15 +49,9 @@ derive instance genericIgoMsg :: Generic IgoMsg
 derive instance genericStoneColor :: Generic StoneColor
 derive instance genericBoardPosition :: Generic BoardPosition
 
-clientConfig = liftEff $ do
-  cfg <- defaultConfig $ Just
-            { path: "/Users/michael/.ssb-test"
-            , keys: Nothing }
-  pure cfg { port = 8088, shs = "GVZDyNf1TrZuGv3W5Dpef0vaITW1UqOUO3aWLNBp+7A=" }
-
 publishMsg :: ∀ eff. IgoMsg -> SF eff Unit
 publishMsg msg = do
-  client <- getClient =<< clientConfig
+  client <- getClient'
   info "publishing"
   _ <- publish client $ toJson msg
   info "donezo"

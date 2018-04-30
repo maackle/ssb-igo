@@ -1,7 +1,7 @@
 module Ssb.Client
   ( getClient
   , publish
-  , ClientF
+  , ClientConnection
   ) where
 
 import Prelude
@@ -13,23 +13,15 @@ import Data.Argonaut (Json)
 import Data.Function.Uncurried (Fn2, runFn2)
 import Ssb.Config (Config, SSB)
 
-foreign import data ClientF :: Type
+foreign import data ClientConnection :: Type
 
 type SF f a = Aff (ssb :: SSB | f) a
 
-foreign import _getClient :: ∀ f. Config -> EffFnAff (ssb :: SSB | f) ClientF
-foreign import _publish :: ∀ f. ClientF -> Json -> (EffFnAff (ssb :: SSB | f) Json)
+foreign import _getClient :: ∀ f. Config -> EffFnAff (ssb :: SSB | f) ClientConnection
+foreign import _publish :: ∀ f. ClientConnection -> Json -> (EffFnAff (ssb :: SSB | f) Json)
 
-getClient :: ∀ f. Config -> SF f ClientF
+getClient :: ∀ f. Config -> SF f ClientConnection
 getClient config = fromEffFnAff $ _getClient config
 
-publish :: ∀ f. ClientF -> Json -> SF f Json
+publish :: ∀ f. ClientConnection -> Json -> SF f Json
 publish client msg = fromEffFnAff $ _publish client msg
-
--- getClient :: SsbEff ClientInstance
--- getClient
-
-
--- demo = do
---   client <- getClient
---   publish client

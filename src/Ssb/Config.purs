@@ -13,6 +13,7 @@ import Data.Argonaut (class EncodeJson, Json, fromString, jsonEmptyObject, jsonN
 import Data.Argonaut.Generic.Aeson (encodeJson)
 import Data.Generic (class Generic)
 import Data.Maybe (Maybe(..))
+import Data.StrMap (StrMap)
 
 
 type Config =
@@ -22,6 +23,7 @@ type Config =
   , port :: Int
   , host :: String
   , keys :: Keys
+  , manifest :: Maybe (StrMap String)
   }
 
 type Keys =
@@ -42,11 +44,11 @@ type Caps =
   }
 
 type DefaultConfigOpts =
-  Maybe { keys :: Maybe Keys, path :: String }
+  Maybe { path :: String, keys :: Maybe Keys }
 
 defaultConfig :: ∀ f. DefaultConfigOpts -> Eff (ssb :: SSB | f) Config
 defaultConfig Nothing = _defaultConfig jsonNull jsonNull
-defaultConfig (Just {keys, path}) =
+defaultConfig (Just {path, keys}) =
   case keys of
     Just k -> _defaultConfig (fromString path) (encodeJsonKeys k)
     Nothing -> _defaultConfig (fromString path) jsonNull

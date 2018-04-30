@@ -16,7 +16,7 @@ derive instance functorSub :: Functor Sub
 
 type SubEffects eff = (ssb :: SSB, console :: CONSOLE | eff)
 
-type E fx = Eff (SubEffects fx)
+type E fx = Eff ( fx)
 
 -- NOTE: couldn't use stepper here because can't directly return an `Eff fx Action`
 -- due to needing to defer to the listener to add items to the queue
@@ -24,7 +24,7 @@ type E fx = Eff (SubEffects fx)
 -- NOTE: also couldn't use withCont because it executes every sub,
 -- we can't differentiate between first time (for setup) and subsequent times
 
-type Handler eff = (Json -> E eff Unit)
+type Handler eff = (Json -> E eff Boolean)
 
 interpreter ∷
   ∀ eff o  -- o is Action!!
@@ -42,6 +42,7 @@ interpreter listenWith = Interpreter $ EventQueue.withAccum spec
             ReceiveSsbMessage k -> do
               queue.push (k json)
               queue.run
+              pure true
 
         init = false
 

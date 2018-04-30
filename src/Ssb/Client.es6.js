@@ -3,17 +3,14 @@ const ssbKeys = require('ssb-keys')
 
 
 exports._getClient = config => (error, success) => {
-  console.log("getClient outer")
   config.caps = {
     shs: config.shs,
     sign: config.sign,
   }
-  console.log(config)
   ssbClient(
     config.keys,
     config,
     (err, client) => {
-      console.log("getClient inner")
       if (err) error(err)
       else success(client)
     }
@@ -22,10 +19,8 @@ exports._getClient = config => (error, success) => {
 }
 
 exports._publish = client => data => {
-  console.log("publish outer")
   return (error, success) => {
     client.publish(data, (err, msg) => {
-      console.log("publish inner")
       if (err) error(err)
       else success(msg)
     })

@@ -5,13 +5,10 @@ var ssbKeys = require('ssb-keys');
 
 exports._getClient = function (config) {
   return function (error, success) {
-    console.log('getClient outer');
     config.caps = {
       shs: config.shs,
       sign: config.sign };
-    console.log(config);
     ssbClient(config.keys, config, function (err, client) {
-      console.log('getClient inner');
       if (err) error(err);else success(client);
     });
     return function (ce, cre, cs) {
@@ -22,10 +19,8 @@ exports._getClient = function (config) {
 
 exports._publish = function (client) {
   return function (data) {
-    console.log('publish outer');
     return function (error, success) {
       client.publish(data, function (err, msg) {
-        console.log('publish inner');
         if (err) error(err);else success(msg);
       });
       return function (ce, cre, cs) {
