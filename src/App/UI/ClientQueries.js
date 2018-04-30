@@ -2,6 +2,8 @@
 
 exports.getStream = function getStream(client) {
   return function () {
-    return client.ssbIgo.streamDb();
+    const stream = client.ssbIgo.streamDb();
+    console.log('da stream', stream)
+    return stream
   };
 };

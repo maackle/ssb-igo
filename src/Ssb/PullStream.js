@@ -6,9 +6,14 @@ var pull = require("pull-stream");
 exports._drain = function (stream) {
   return function (fn) {
     return function (error, success) {
-      pull(stream, pull.drain(function (d) {
-        return fn(d)();
-      }, success));
+      var op = function op(d) {
+        var ret = fn(d)();
+        console.log("drainded", d, ret);
+        return ret;
+      };
+      var pipeline = pull(stream, pull.through(function (x) {
+        return console.log("piping thru", x);
+      }), pull.drain(op, success));
       return function (ce, cre, cs) {
         return cs();
       };

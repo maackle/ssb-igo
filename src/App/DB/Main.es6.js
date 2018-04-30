@@ -11,4 +11,4 @@ exports.flumeUse =
 
 exports.liveStream =
   view => () =>
-    view.stream({live: true})
+    (console.log(view), view.stream({live: true}))

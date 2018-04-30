@@ -23,6 +23,5 @@ runEffect = case _ of
   Nofx next -> pure next
   Log msg next -> log ("Effect Log: " <> msg) *> pure next
   Publish msg next -> do
-    log "humm"
     Msg.publishMsg msg
     pure next

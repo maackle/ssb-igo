@@ -24,6 +24,6 @@ exports.flumeUse = function (sbot) {
 
 exports.liveStream = function (view) {
   return function () {
-    return view.stream({ live: true });
+    return (console.log(view), view.stream({ live: true }));
   };
 };

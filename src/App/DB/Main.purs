@@ -25,8 +25,8 @@ ssbIgoPlugin =
   where
     init sbot = do
       view <- flumeUse sbot "ssb-igo" flumeReducer
-      log "OK!!"
       stream <- liveStream view
+      log "Plugin initialized!"
       pure { streamDb: const stream }
 
     manifest = { "streamDb": "source" }
