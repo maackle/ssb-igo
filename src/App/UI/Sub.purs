@@ -5,7 +5,8 @@ import Prelude hiding (sub)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Data.Argonaut (Json)
-import Spork.EventQueue (EventQueueInstance)
+import Data.Maybe (Maybe(..))
+import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
 import Spork.EventQueue as EventQueue
 import Spork.Interpreter (Interpreter(..))
 import Ssb.Config (SSB)
@@ -15,24 +16,37 @@ derive instance functorSub :: Functor Sub
 
 type SubEffects eff = (ssb :: SSB, console :: CONSOLE | eff)
 
+type E fx = Eff (SubEffects fx)
+
 -- NOTE: couldn't use stepper here because can't directly return an `Eff fx Action`
 -- due to needing to defer to the listener to add items to the queue
 
+-- NOTE: also couldn't use withCont because it executes every sub,
+-- we can't differentiate between first time (for setup) and subsequent times
+
+type Handler eff = (Json -> E eff Unit)
+
 interpreter ∷
   ∀ eff o  -- o is Action!!
-  . ((Json -> Eff (SubEffects eff) Unit) -> Eff (SubEffects eff) Unit)
-  -> Interpreter (Eff (SubEffects eff)) Sub o
-interpreter setupListener = Interpreter $ EventQueue.withCont spec
+  . (Handler eff -> E eff Unit)
+  -> Interpreter (E eff) Sub o
+interpreter listenWith = Interpreter $ EventQueue.withAccum spec
   where
-    listener :: EventQueueInstance (Eff (SubEffects eff)) o -> Sub o -> Json -> Eff (SubEffects eff) Unit
-    listener queue sub json =
-      case sub of
-        ReceiveSsbMessage k -> do
-          queue.push (k json)
-          queue.run
 
-    spec :: EventQueueInstance (Eff (SubEffects eff)) o -> Sub o -> (Eff (SubEffects eff) Unit)
-    spec queue sub = do
-      log "SEtting up interpreter"
-      setupListener $ listener queue sub
-      pure unit
+    spec :: EventQueueInstance (E eff) o -> E eff (EventQueueAccum (E eff) Boolean (Sub o))
+    spec queue = pure { init, update, commit }
+      where
+        getHandler :: Sub o -> Handler eff
+        getHandler sub json =
+          case sub of
+            ReceiveSsbMessage k -> do
+              queue.push (k json)
+              queue.run
+
+        init = false
+
+        update started sub = do
+          when (not started) $ listenWith $ getHandler sub
+          pure true
+
+        commit = pure

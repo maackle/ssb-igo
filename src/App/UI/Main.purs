@@ -92,9 +92,9 @@ main = do
       fn jsonNull
       pure unit
 
-    setupListener fn = dummyDrain 4000 fn *> pure unit
+    listenWith fn = dummyDrain 4000 fn *> pure unit
 
-    interpreter = (effectInterpreter `merge` Sub.interpreter setupListener)
+    interpreter = (effectInterpreter `merge` Sub.interpreter listenWith)
 
   inst ←
     App.makeWithSelector
