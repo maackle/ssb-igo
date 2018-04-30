@@ -1,14 +1,19 @@
 module App.Streaming where
 
+import Prelude
 
 import App.IgoMsg (IgoMsg(..))
+import Data.Argonaut (Json)
 import Data.Foreign (Foreign)
+import Data.Function.Uncurried (Fn2)
+import Data.Maybe (Maybe(..))
 
 
 type FlumeDb = {}
 
 type ReduceFn = FlumeDb -> IgoMsg -> FlumeDb
-type MapFn = Foreign -> IgoMsg
+type ReduceFnImpl = Fn2 FlumeDb IgoMsg FlumeDb
+type MapFn = Json -> Maybe IgoMsg
 
 reduceFn :: ReduceFn
 reduceFn db = case _ of
@@ -16,4 +21,4 @@ reduceFn db = case _ of
   _ -> {}
 
 mapFn :: MapFn
-mapFn _ = Kibitz { move: "D7", text: "TODO" }
+mapFn _ = Just $ Kibitz { move: "D11", text: "TODO" }

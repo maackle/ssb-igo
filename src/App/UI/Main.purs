@@ -78,7 +78,7 @@ routeAction = case _ of
   "/"         -> Nothing
   _           -> Nothing
 
-type FX = App.AppEffects (ssb :: SSB, console :: CONSOLE, timer :: TIMER)
+type FX = App.AppEffects (ssb :: SSB, console :: CONSOLE)
 
 handleException :: ∀ f. Error -> Eff (console :: CONSOLE | f) Unit
 handleException e = Eff.error $ show e
@@ -101,6 +101,8 @@ main = do
   where
     effectInterpreter :: ∀ i. Interpreter (Eff FX) Effect i
     effectInterpreter = (throughAff runEffect handleException)
+    -- effectInterpreterEff = liftNat runEffect
+
 
     -- Receives a handler function which must be contructed
     -- inside the subscription interpreter, and hooks that up

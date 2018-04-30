@@ -4,11 +4,8 @@ const app = electron.app
 // Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow
 
-const fs = require('fs')
 const path = require('path')
 const url = require('url')
-
-const {ssbIgoPlugin} = require('../output/App.DB.Main')
 
 require('electron-reload')(path.join(__dirname, 'ui'))
 
@@ -41,42 +38,11 @@ function createWindow () {
   })
 }
 
-function dumpManifest(sbot, filePath) {
-  const manifest = JSON.stringify(sbot.getManifest())
-  fs.writeFileSync(path.join(filePath, "manifest.json"), manifest)
-}
-
-function startSbot () {
-  const path = "/Users/michael/.ssb-test"
-  const keys = require('ssb-keys').loadOrCreateSync(path + "/secret")
-
-  const config = require('ssb-config/inject')('ssb', {
-    path: path,
-    keys: keys,
-    host: "localhost",
-    port: 8088,
-    master: keys.id,
-    caps: {
-      shs: process.env.SBOT_SHS || "GVZDyNf1TrZuGv3W5Dpef0vaITW1UqOUO3aWLNBp+7A=",
-      sign: process.env.SBOT_SIGN || null,
-    }
-  });
-
-  sbot =
-    require('scuttlebot')
-    .use(require("scuttlebot/plugins/master"))
-    .use(ssbIgoPlugin)
-    (config)
-
-  dumpManifest(sbot, path)
-
-  console.info("sbot running")
-}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', () => {createWindow(); startSbot()})
+app.on('ready', () => {createWindow()})
 
 // Quit when all windows are closed.
 app.on('window-all-closed', function () {

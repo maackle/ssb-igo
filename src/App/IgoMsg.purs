@@ -2,21 +2,18 @@ module App.IgoMsg where
 
 import Prelude
 
-import App.Common (clientConfig, getClient')
+import App.Common (getClient')
 import App.Utils (toObject')
 import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Console (CONSOLE, info)
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
-import Data.Argonaut (Json, fromObject, fromString, toObject)
+import Control.Monad.Aff.Console (CONSOLE)
+import Data.Argonaut (Json, fromObject, fromString)
 import Data.Argonaut.Generic.Aeson (encodeJson)
 import Data.Either (Either(..))
 import Data.Generic (class Generic)
-import Data.Maybe (Maybe(..))
 import Data.StrMap (insert)
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
-import Ssb.Client (getClient, publish)
+import Ssb.Client (getClient, publish, close)
 import Ssb.Config (SSB, Config, defaultConfig)
 
 type SF eff a = Aff (ssb :: SSB, console :: CONSOLE | eff) a

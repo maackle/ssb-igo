@@ -1,6 +1,7 @@
 module Ssb.Client
   ( getClient
   , publish
+  , close
   , ClientConnection
   ) where
 
@@ -19,9 +20,12 @@ type SF f a = Aff (ssb :: SSB | f) a
 
 foreign import _getClient :: ∀ f. Config -> EffFnAff (ssb :: SSB | f) ClientConnection
 foreign import _publish :: ∀ f. ClientConnection -> Json -> (EffFnAff (ssb :: SSB | f) Json)
+foreign import _close :: ∀ f. ClientConnection -> EffFnAff (ssb :: SSB | f) Unit
 
 getClient :: ∀ f. Config -> SF f ClientConnection
 getClient config = fromEffFnAff $ _getClient config
 
 publish :: ∀ f. ClientConnection -> Json -> SF f Json
 publish client msg = fromEffFnAff $ _publish client msg
+
+close = fromEffFnAff <<< _close

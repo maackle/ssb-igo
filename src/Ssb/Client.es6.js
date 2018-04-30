@@ -11,22 +11,28 @@ exports._getClient = config => (error, success) => {
     config.keys,
     config,
     (err, client) => {
+      console.log('ccc', err, client)
       if (err) error(err)
       else success(client)
     }
   )
-  return (ce, cre, cs) => cs()
+  // return (ce, cre, cs) => cs()
 }
 
-exports._publish = client => data => {
-  return (error, success) => {
+exports._publish = client => data =>
+  (error, success) =>
     client.publish(data, (err, msg) => {
+      console.log('published: ', err, msg)
       if (err) error(err)
       else success(msg)
     })
-    return (ce, cre, cs) => {
-      cs()
-    }
+
+
+exports._close = client => {
+  return (error, success) => {
+    client.close(true)
+    console.log("connection closed: ", client.closed)
+    success()
   }
 }
 //
