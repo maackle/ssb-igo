@@ -24,8 +24,8 @@ ssbIgoPlugin =
   }
   where
     init sbot = do
-      log "iniiit"
       view <- flumeUse sbot "ssb-igo-index" flumeReducer
+      log "OK!!"
       stream <- liveStream view
       pure { streamDb: const stream }
 
