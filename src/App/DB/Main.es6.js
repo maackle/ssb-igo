@@ -1,6 +1,7 @@
-const Reduce = require("flumeview-reduce")
+
 
 exports.mkFlumeReducer = version => reducer => mapper => initial => {
+  const Reduce = require("flumeview-reduce")
   Reduce(version, reducer, mapper, null, initial)
 }
 

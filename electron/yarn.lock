@@ -1450,9 +1450,9 @@ level@^1.4.0, level@^1.7.0:
     level-packager "~1.2.0"
     leveldown "~1.7.0"
 
-"level@git://github.com/luandro/level.git":
+"level@git://github.com/luandro/level":
   version "3.0.0"
-  resolved "git://github.com/luandro/level.git#1464fe8f511abf83eefb507a7cbffdad0731726b"
+  resolved "git://github.com/luandro/level#1464fe8f511abf83eefb507a7cbffdad0731726b"
   dependencies:
     level-packager "^2.0.2"
     leveldown "^3.0.0"

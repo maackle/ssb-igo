@@ -6,6 +6,7 @@ const BrowserWindow = electron.BrowserWindow
 
 const path = require('path')
 const url = require('url')
+const {ssbIgoPlugin} = require('../output/App.DB.Main')
 
 require('electron-reload')(path.join(__dirname, 'ui'))
 
@@ -57,7 +58,7 @@ function startSbot () {
   sbot =
     require('scuttlebot')
     .use(require("scuttlebot/plugins/master"))
-    // .use(require('.'))
+    .use(ssbIgoPlugin)
     (config)
 
   console.info("sbot running")

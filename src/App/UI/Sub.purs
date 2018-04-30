@@ -15,6 +15,9 @@ derive instance functorSub :: Functor Sub
 
 type SubEffects eff = (ssb :: SSB, console :: CONSOLE | eff)
 
+-- NOTE: couldn't use stepper here because can't directly return an `Eff fx Action`
+-- due to needing to defer to the listener to add items to the queue
+
 interpreter ∷
   ∀ eff o  -- o is Action!!
   . ((Json -> Eff (SubEffects eff) Unit) -> Eff (SubEffects eff) Unit)
@@ -24,7 +27,9 @@ interpreter setupListener = Interpreter $ EventQueue.withCont spec
     listener :: EventQueueInstance (Eff (SubEffects eff)) o -> Sub o -> Json -> Eff (SubEffects eff) Unit
     listener queue sub json =
       case sub of
-        ReceiveSsbMessage k -> queue.push $ (k json)
+        ReceiveSsbMessage k -> do
+          queue.push (k json)
+          queue.run
 
     spec :: EventQueueInstance (Eff (SubEffects eff)) o -> Sub o -> (Eff (SubEffects eff) Unit)
     spec queue sub = do

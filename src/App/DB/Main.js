@@ -1,11 +1,10 @@
 "use strict";
 
-var Reduce = require("flumeview-reduce");
-
 exports.mkFlumeReducer = function (version) {
   return function (reducer) {
     return function (mapper) {
       return function (initial) {
+        var Reduce = require("flumeview-reduce");
         Reduce(version, reducer, mapper, null, initial);
       };
     };
