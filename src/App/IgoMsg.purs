@@ -52,9 +52,7 @@ derive instance genericBoardPosition :: Generic BoardPosition
 publishMsg :: ∀ eff. IgoMsg -> SF eff Unit
 publishMsg msg = do
   client <- getClient'
-  info "publishing"
   _ <- publish client $ toJson msg
-  info "donezo"
   pure unit
 
 toJson :: IgoMsg -> Json

@@ -3,12 +3,8 @@ const pull = require("pull-stream")
 //
 exports._drain =
   stream => fn => (error, success) => {
-    const op = d => {
-      const ret = fn(d)()
-      console.log('drainded', d, ret)
-      return ret
-    }
-    const pipeline = pull(
+    const op = d => fn(d)()
+    pull(
       stream,
       pull.through(x => console.log("piping thru", x)),
       pull.drain(op, success)

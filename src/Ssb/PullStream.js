@@ -7,11 +7,9 @@ exports._drain = function (stream) {
   return function (fn) {
     return function (error, success) {
       var op = function op(d) {
-        var ret = fn(d)();
-        console.log("drainded", d, ret);
-        return ret;
+        return fn(d)();
       };
-      var pipeline = pull(stream, pull.through(function (x) {
+      pull(stream, pull.through(function (x) {
         return console.log("piping thru", x);
       }), pull.drain(op, success));
       return function (ce, cre, cs) {
