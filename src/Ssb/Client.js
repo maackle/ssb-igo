@@ -19,7 +19,7 @@ exports._publish = function (client) {
   return function (data) {
     return function (error, success) {
       return client.publish(data, function (err, msg) {
-        console.log('published: ', err, msg);
+        console.log('publisheddd: ', err, msg);
         if (err) error(err);else success(msg);
       });
     };

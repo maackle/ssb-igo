@@ -8,10 +8,9 @@ module Ssb.Client
 import Prelude
 
 import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Compat (EffFnAff(..), fromEffFnAff)
+import Control.Monad.Aff.Compat (EffFnAff, fromEffFnAff)
 import Control.Monad.Eff (kind Effect)
 import Data.Argonaut (Json)
-import Data.Function.Uncurried (Fn2, runFn2)
 import Ssb.Config (Config, SSB)
 
 foreign import data ClientConnection :: Type
@@ -28,4 +27,5 @@ getClient config = fromEffFnAff $ _getClient config
 publish :: ∀ f. ClientConnection -> Json -> SF f Json
 publish client msg = fromEffFnAff $ _publish client msg
 
+close :: ∀ f. ClientConnection -> Aff (ssb :: SSB | f) Unit
 close = fromEffFnAff <<< _close

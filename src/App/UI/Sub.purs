@@ -3,18 +3,16 @@ module App.UI.Sub where
 import Prelude hiding (sub)
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE, log)
 import Data.Argonaut (Json)
-import Data.Maybe (Maybe(..))
+import Debug.Trace (traceAnyA)
 import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
 import Spork.EventQueue as EventQueue
 import Spork.Interpreter (Interpreter(..))
-import Ssb.Config (SSB)
 
 data Sub a = ReceiveSsbMessage (Json -> a)
 derive instance functorSub :: Functor Sub
 
-type SubEffects eff = (ssb :: SSB, console :: CONSOLE | eff)
+-- type SubEffects eff = (console :: CONSOLE | eff)
 
 type E fx = Eff ( fx)
 
@@ -38,8 +36,10 @@ interpreter listenWith = Interpreter $ EventQueue.withAccum spec
       where
         getHandler :: Sub o -> Handler eff
         getHandler sub json =
+
           case sub of
             ReceiveSsbMessage k -> do
+              traceAnyA (json)
               queue.push (k json)
               queue.run
               pure true

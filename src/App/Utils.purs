@@ -2,23 +2,24 @@ module App.Utils where
 
 import Prelude
 
-import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Console (error, errorShow)
-import Control.Monad.Eff.Console (CONSOLE)
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Console (CONSOLE, errorShow)
 import Data.Argonaut.Core (JArray, Json, JObject, toArray, toObject)
-import Data.Array (cons, fromFoldable, replicate, scanl)
+import Data.Array (cons, replicate, scanl)
 import Data.Date (day, month)
 import Data.DateTime (Date, DateTime(..), Time(..), adjust, diff, exactDate)
-import Data.Either (Either(..), either)
+import Data.Either (Either(Right, Left))
 import Data.Enum (class BoundedEnum, fromEnum, toEnum)
 import Data.Int (decimal, floor, toStringAs)
 import Data.Maybe (Maybe(..), fromJust, maybe)
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.StrMap (StrMap, lookup)
-import Data.Time.Duration (class Duration, Milliseconds(..), Minutes(..), Seconds(..), fromDuration)
+import Data.Time.Duration (class Duration, Milliseconds(Milliseconds), fromDuration)
 import Data.Tuple (Tuple(..))
+import Debug.Trace (class DebugWarning, trace)
 import Partial.Unsafe (unsafePartial)
 
+map_ :: forall m a b. Functor m => m b -> (b -> a) -> m a
 map_ = flip map
 
 infixr 5 Tuple as !
@@ -81,9 +82,12 @@ maybeToEither :: ∀ a b. b -> Maybe a -> Either b a
 maybeToEither l =
   maybe (Left l) Right
 
-eitherOrError :: ∀ a s fx. Show s => Either s a -> Aff (console :: CONSOLE | fx) (Maybe a)
+eitherOrError :: ∀ a s fx. Show s => Either s a -> Eff (console :: CONSOLE | fx) (Maybe a)
 eitherOrError (Left msg) = errorShow msg *> pure Nothing
 eitherOrError (Right val)  = pure $ Just val
+
+lookup_ :: String -> StrMap Json -> Either String Json
+lookup_ k o = maybeToEither ("Missing key " <> k) $ (lookup k o)
 
 lookup' :: ∀ a. String -> (Json -> Maybe a) -> StrMap Json -> Either String a
 lookup' k f = maybeToEither ("Missing key " <> k) <<< (f <=< lookup k)
@@ -97,3 +101,6 @@ toObject' = maybeToEither "not an object" <<< toObject
 unupdate :: ∀ f a. Newtype f a => (a -> a) -> (f -> f)
 unupdate update =
   wrap <<< update <<< unwrap
+
+trace' :: ∀ a. DebugWarning => String -> a -> a
+trace' m = trace m <<< const

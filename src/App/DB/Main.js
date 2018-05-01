@@ -1,5 +1,6 @@
 "use strict";
 
+var pull = require("pull-stream");
 var Reduce = require("flumeview-reduce");
 
 exports.mkFlumeReducer = function (version) {

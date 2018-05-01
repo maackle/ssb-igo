@@ -1,4 +1,4 @@
 
-const getStream =
+exports.getStream =
   client => () =>
     client.ssbIgo.streamDb()

@@ -1,6 +1,6 @@
 "use strict";
 
-var getStream = function getStream(client) {
+exports.getStream = function (client) {
   return function () {
     return client.ssbIgo.streamDb();
   };

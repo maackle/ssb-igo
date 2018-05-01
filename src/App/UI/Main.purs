@@ -13,10 +13,9 @@ import App.UI.Sub as Sub
 import App.UI.View (render)
 import Control.Monad.Aff (Aff, Error, launchAff_)
 import Control.Monad.Aff.Class (liftAff)
-import Control.Monad.Aff.Console (CONSOLE, log)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console (error, log) as Eff
+import Control.Monad.Eff.Console (CONSOLE, error, log) as Eff
 import Control.Monad.Eff.Timer (TIMER, setInterval)
 import Control.MonadZero (guard)
 import DOM (DOM)
@@ -56,7 +55,7 @@ update model = case _ of
     in
       { model, effects }
   ReduceIgoMessage json ->
-    { model, effects: App.lift (Log "hahaha" Noop) }
+    { model, effects: App.lift (Log ("hahaha  " <> show json) Noop) }
 
 subs :: Model -> App.Batch Sub Action
 subs _ =
@@ -78,9 +77,9 @@ routeAction = case _ of
   "/"         -> Nothing
   _           -> Nothing
 
-type FX = App.AppEffects (ssb :: SSB, console :: CONSOLE)
+type FX = App.AppEffects (ssb :: SSB, console :: Eff.CONSOLE)
 
-handleException :: ∀ f. Error -> Eff (console :: CONSOLE | f) Unit
+handleException :: ∀ f. Error -> Eff (console :: Eff.CONSOLE | f) Unit
 handleException e = Eff.error $ show e
 
 main ∷ Eff (FX) Unit

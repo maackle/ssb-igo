@@ -22,7 +22,7 @@ exports._getClient = config => (error, success) => {
 exports._publish = client => data =>
   (error, success) =>
     client.publish(data, (err, msg) => {
-      console.log('published: ', err, msg)
+      console.log('publisheddd: ', err, msg)
       if (err) error(err)
       else success(msg)
     })

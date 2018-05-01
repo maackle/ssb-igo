@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pulp build -I src --to dist/bundle.js -m App.UI.Main",
     "watch": "pulp -w build -I src -m App.UI.Main",
-    "dev": "concurrently --raw --kill-others \"bin/watch-es6.sh\" \"pscid\"",
+    "dev": "concurrently --raw --kill-others \"bin/watch-es6.sh\"",
     "electron": "electron ./electron/main.js",
     "sbot": "node bin/start-sbot.js",
     "start": "npm run build && parcel index.html"

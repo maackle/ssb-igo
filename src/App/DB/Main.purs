@@ -2,18 +2,11 @@ module App.DB.Main where
 
 import Prelude
 
-import App.IgoMsg (IgoMsg(..))
-import App.Streaming (FlumeDb, MapFn, ReduceFn, ReduceFnImpl, mapFn, reduceFn)
+import App.Streaming (FlumeDb, MapFn, ReduceFnImpl, mapFn, reduceFn)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (log)
 import Control.Monad.Eff.Unsafe (unsafePerformEff)
-import Data.Argonaut (Json, fromObject, fromString)
-import Data.Argonaut.Generic.Aeson (encodeJson)
-import Data.Foreign (Foreign, toForeign)
 import Data.Function.Uncurried (mkFn2)
-import Data.StrMap (StrMap)
-import Data.StrMap as M
-import Data.Tuple (Tuple(..))
 import Ssb.Config (SSB)
 import Ssb.PullStream (PullStream)
 
@@ -31,6 +24,7 @@ ssbIgoPlugin =
 
     manifest = { "streamDb": "source" }
 
+flumeReducer :: FlumeReducer
 flumeReducer = mkFlumeReducer "0.1" (mkFn2 reduceFn) mapFn {}
 
 foreign import data FlumeReducer :: Type
