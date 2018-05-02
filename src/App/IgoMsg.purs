@@ -19,21 +19,35 @@ import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
 import Ssb.Client (close, getClient, publish, publishPrivate)
 import Ssb.Config (SSB, Config, defaultConfig)
+import Ssb.Types (MessageKey, UserKey)
 
 type SE eff a = Eff (ssb :: SSB | eff) a
 type SA eff a = Aff (ssb :: SSB | eff) a
+type MsgKey = MessageKey
 
 data IgoMsg
-  = RequestMatch GameTerms
-  | ExpireRequest
-  | OfferMatch {|OfferMatchRows}
+  = RequestMatch RequestMatchPayload
+  | ExpireRequest MsgKey
+  | OfferMatch OfferMatchPayload
   | WithdrawOffer MsgKey
-  | AcceptMatch MsgKey
-  | DeclineMatch MsgKey
-  | PlayMove { position :: BoardPosition, lastMove :: MsgKey, subjectiveMoveNum :: Int }
-  | Kibitz { move :: MsgKey, text :: String }
+  | AcceptMatch AcceptMatchPayload
+  | DeclineMatch DeclineMatchPayload
+  | AcknowledgeDecline MsgKey
+  | PlayMove PlayMovePayload
+  | Kibitz KibitzPayload
 
-type OfferMatchRows = (terms :: GameTerms, userKey :: UserKey, opponentColor :: StoneColor)
+type OfferMatchPayload =
+  {terms :: GameTerms, myColor :: StoneColor, opponentKey :: String}
+type RequestMatchPayload =
+  {terms :: GameTerms}
+type AcceptMatchPayload =
+  {offerKey :: MsgKey, terms :: GameTerms}
+type DeclineMatchPayload =
+  {offerKey :: MsgKey, reason :: Maybe String}
+type PlayMovePayload =
+  { position :: BoardPosition, lastMove :: MsgKey, subjectiveMoveNum :: Int }
+type KibitzPayload =
+  { move :: MsgKey, text :: String }
 
 data SsbMessage = SsbMessage IgoMsg
   { key :: String
@@ -43,10 +57,6 @@ data SsbMessage = SsbMessage IgoMsg
   , hash :: String
   , signature :: String
   }
-
-type MsgKey = String
-
-type UserKey = String
 
 type GameTerms =
   { size :: Int
@@ -106,15 +116,17 @@ parseMessage json = do
 
 demoMsg :: IgoMsg
 demoMsg = RequestMatch
-  { size: 19
-  , handicap: 0
-  , komi: 5.5
+  { terms:
+    { size: 19
+    , handicap: 0
+    , komi: 5.5
+    }
   }
 
-demoPrivate :: IgoMsg
-demoPrivate = OfferMatch
-  { userKey: "PhgZSAy4aWPYx231rgypWz8jjNOJmwCi9diVYiYHh50=.ed25519"
-  , opponentColor: Black
+demoOfferPayload :: UserKey -> OfferMatchPayload
+demoOfferPayload opponentKey =
+  { myColor: Black
+  , opponentKey
   , terms:
     { size: 19
     , handicap: 0

@@ -3,20 +3,29 @@ module App.Streaming where
 import Prelude
 
 import App.Common (messageTypeString)
-import App.IgoMsg (IgoMsg(OfferMatch), MsgKey, OfferMatchRows, SsbMessage(SsbMessage), parseMessage)
+import App.IgoMsg (AcceptMatchPayload, DeclineMatchPayload, IgoMsg(..), MsgKey, OfferMatchPayload, RequestMatchPayload, SsbMessage(SsbMessage), parseMessage)
 import App.Utils (trace')
 import Data.Argonaut (Json, jsonNull, toObject, toString)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
-import Data.Maybe (Maybe, maybe)
-import Data.StrMap (lookup)
+import Data.Maybe (Maybe(..), maybe)
+import Data.StrMap (StrMap, delete, insert, lookup)
 import Partial.Unsafe (unsafeCrashWith)
+import Ssb.Types (UserKey)
 
 
 type FlumeDb =
-  { --offers :: Map MsgKey OfferData
---  , requests :: Map MsgKey
+  { offers :: StrMap IndexedOffer
+  , declines :: StrMap IndexedDecline
+  , requests :: StrMap IndexedRequest
+  , matches :: StrMap IndexedAccept
   }
+
+-- TODO: make newtype
+data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey}
+data IndexedDecline = IndexedDecline DeclineMatchPayload {opponentKey :: UserKey}
+data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey}
+data IndexedAccept = IndexedAccept AcceptMatchPayload {author :: UserKey}
 
 type ReduceFn = FlumeDb -> Json -> FlumeDb
 type ReduceFnImpl = Fn2 FlumeDb Json FlumeDb
@@ -27,14 +36,43 @@ data MessageType
   | PrivateMessage
   | InvalidMessage
 
-type OfferData = {msgKey :: MsgKey | OfferMatchRows}
 
 reduceFn :: ReduceFn
 reduceFn db json =
   case msg of
-    msg@(SsbMessage (OfferMatch content) {key}) -> {}
-      -- db { offers = insert key (content { msgKey = key }) db.offers }
-    _ -> trace' "TODO :()" {}
+    SsbMessage (RequestMatch payload) {key, author} ->
+      db { requests = insert key (IndexedRequest payload {author}) db.requests }
+
+    SsbMessage (ExpireRequest targetKey) {author} ->
+      case lookup targetKey db.requests of
+        Nothing -> db
+        Just (IndexedRequest _ meta) ->
+          if author == meta.author
+            then db { requests = delete targetKey db.requests }
+            else db
+
+    SsbMessage (OfferMatch payload) {key, author} ->
+      db { offers = insert key (IndexedOffer payload {author}) db.offers }
+
+    SsbMessage (DeclineMatch payload@{offerKey}) {key, author} ->
+      case lookup offerKey db.offers of
+        Nothing -> db
+        Just (IndexedOffer {opponentKey} meta) ->
+          if author == opponentKey
+            then db { offers = delete offerKey db.offers
+                    , declines = insert key (IndexedDecline payload {opponentKey}) db.declines
+                    }
+            else db
+
+    SsbMessage (AcknowledgeDecline targetKey) {author} ->
+      case lookup targetKey db.declines of
+        Nothing -> db
+        Just (IndexedDecline _ {opponentKey}) ->
+          if author == opponentKey
+            then db { declines = delete targetKey db.declines }
+            else db
+
+    _ -> trace' "TODO :()" db
   where
     msg = case parseMessage json of
       Right m -> m

@@ -2,32 +2,29 @@ module App.UI.Action where
 
 import Prelude
 
+import App.IgoMsg (IgoMsg(..), StoneColor, OfferMatchPayload)
 import App.IgoMsg as Msg
 import App.UI.Effect (Effect(..))
 import App.UI.Model (Model)
 import Data.Argonaut (Json)
+import Spork.App (lift)
 import Spork.App as App
+import Ssb.Types (UserKey)
 
 data Action
   = Noop
   | PlaceStone
-  | CreateOffer
+  | CreateOffer UserKey OfferMatchPayload
   | ReduceIgoMessage Json
-
-
-testIdentity = "PhgZSAy4aWPYx231rgypWz8jjNOJmwCi9diVYiYHh50=.ed25519"
-otherIdentity = "70mCOxEUBDup8sP1ec7XjCQqJmN6/XQDVf7wRKyjEvQ=.ed25519"
 
 update ∷ Model -> Action -> App.Transition Effect Model Action
 update model = case _ of
   Noop ->
     App.purely model
   PlaceStone ->
-    let
-      effects = App.lift (Publish (Msg.demoMsg) Noop)
-    in
-      { model, effects }
-  CreateOffer ->
-    { model, effects: App.lift (PublishPrivate Msg.demoPrivate [testIdentity] Noop)}
+    { model, effects: lift (Publish (Msg.demoMsg) Noop) }
+  CreateOffer opponent payload ->
+    let msg = OfferMatch payload
+    in { model, effects: lift (PublishPrivate msg [opponent] Noop)}
   ReduceIgoMessage json ->
-    { model, effects: App.lift (Log ("hahaha  " <> show json) Noop) }
+    { model, effects: lift (Log ("hahaha  " <> show json) Noop) }
