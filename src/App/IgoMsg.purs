@@ -2,9 +2,10 @@ module App.IgoMsg where
 
 import Prelude
 
-import App.Common (getClient')
+import App.Common (getClient', messageTypeString)
 import App.Utils (lookup', lookup_, maybeToEither, toObject')
 import Control.Monad.Aff (Aff)
+import Control.Monad.Eff (Eff)
 import Data.Argonaut (JObject, Json, fromObject, fromString, toNumber, toObject, toString)
 import Data.Argonaut.Generic.Aeson (decodeJson, encodeJson)
 import Data.Either (Either(..))
@@ -16,31 +17,34 @@ import Data.Unfoldable (fromMaybe)
 import Debug.Trace (traceAnyA)
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
-import Ssb.Client (getClient, publish, close)
+import Ssb.Client (close, getClient, publish, publishPrivate)
 import Ssb.Config (SSB, Config, defaultConfig)
 
-type SF eff a = Aff (ssb :: SSB | eff) a
+type SE eff a = Eff (ssb :: SSB | eff) a
+type SA eff a = Aff (ssb :: SSB | eff) a
 
 data IgoMsg
   = RequestMatch GameTerms
   | ExpireRequest
-  | OfferMatch {terms :: GameTerms, userKey :: UserKey, opponentColor :: StoneColor}
-  | WithdrawOffer MessageKey
-  | AcceptMatch MessageKey
-  | DeclineMatch MessageKey
-  | PlayMove { position :: BoardPosition, lastMove :: MessageKey, subjectiveMoveNum :: Int }
-  | Kibitz { move :: MessageKey, text :: String }
+  | OfferMatch {|OfferMatchRows}
+  | WithdrawOffer MsgKey
+  | AcceptMatch MsgKey
+  | DeclineMatch MsgKey
+  | PlayMove { position :: BoardPosition, lastMove :: MsgKey, subjectiveMoveNum :: Int }
+  | Kibitz { move :: MsgKey, text :: String }
+
+type OfferMatchRows = (terms :: GameTerms, userKey :: UserKey, opponentColor :: StoneColor)
 
 data SsbMessage = SsbMessage IgoMsg
   { key :: String
-  , previous :: String
+  , previous :: Maybe String
   , author :: String
   , timestamp :: Number  -- inner timestamp
   , hash :: String
   , signature :: String
   }
 
-type MessageKey = String
+type MsgKey = String
 
 type UserKey = String
 
@@ -58,22 +62,28 @@ derive instance genericIgoMsg :: Generic IgoMsg
 derive instance genericStoneColor :: Generic StoneColor
 derive instance genericBoardPosition :: Generic BoardPosition
 
-publishMsg :: ∀ eff. IgoMsg -> SF eff Unit
+publishMsg :: ∀ eff. IgoMsg -> SA eff Unit
 publishMsg msg = do
   client <- getClient'
   _ <- publish client $ toJson msg
   pure unit
 
+publishPrivateMsg :: ∀ eff. IgoMsg -> Array UserKey -> SA eff Unit
+publishPrivateMsg msg recips = do
+  client <- getClient'
+  _ <- publishPrivate client (toJson msg) recips
+  pure unit
+
 toJson :: IgoMsg -> Json
 toJson msg = case toObject' $ encodeJson msg of
-  Right o -> fromObject $ M.insert "type" (fromString "igo") o
+  Right o -> fromObject $ M.insert "type" (fromString messageTypeString) o
   Left err -> unsafePartial $ crashWith err
 
 stripType :: Json -> Either String Json
 stripType json = do
   o :: JObject <- toObject' json
   msgType :: String <- maybeToEither "no type specified" $ toString =<< M.lookup "type" o
-  if msgType == "igo"
+  if msgType == messageTypeString
     then Right $ fromObject $ M.delete "type" o
     else Left "not an ssb-igo message"
 
@@ -83,7 +93,7 @@ parseMessage json = do
   key <- lookup' "key" toString o
   value <- lookup' "value" toObject o
 
-  previous <- lookup' "previous" toString value
+  previous <- toString <$> lookup_ "previous" value
   author <- lookup' "author" toString value
   timestamp <- lookup' "timestamp" (toNumber) value
   hash <- lookup' "hash" toString value
@@ -95,8 +105,15 @@ parseMessage json = do
 
 
 demoMsg :: IgoMsg
-demoMsg = OfferMatch
-  { userKey: "a"
+demoMsg = RequestMatch
+  { size: 19
+  , handicap: 0
+  , komi: 5.5
+  }
+
+demoPrivate :: IgoMsg
+demoPrivate = OfferMatch
+  { userKey: "PhgZSAy4aWPYx231rgypWz8jjNOJmwCi9diVYiYHh50=.ed25519"
   , opponentColor: Black
   , terms:
     { size: 19

@@ -4,7 +4,7 @@ import Prelude hiding (sub)
 
 import Control.Monad.Eff (Eff)
 import Data.Argonaut (Json)
-import Debug.Trace (traceAnyA)
+import Debug.Trace (traceA, traceAnyA)
 import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
 import Spork.EventQueue as EventQueue
 import Spork.Interpreter (Interpreter(..))
@@ -30,16 +30,14 @@ interpreter ∷
   -> Interpreter (E eff) Sub o
 interpreter listenWith = Interpreter $ EventQueue.withAccum spec
   where
-
     spec :: EventQueueInstance (E eff) o -> E eff (EventQueueAccum (E eff) Boolean (Sub o))
     spec queue = pure { init, update, commit }
       where
         getHandler :: Sub o -> Handler eff
         getHandler sub json =
-
           case sub of
             ReceiveSsbMessage k -> do
-              traceAnyA (json)
+              traceA ("ReceiveSsbMessage: " <> (show json))
               queue.push (k json)
               queue.run
               pure true

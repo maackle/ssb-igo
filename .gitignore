@@ -5,3 +5,4 @@ dist/
 .psc-package/
 .tags*
 .psc-ide-port
+ssb-data/

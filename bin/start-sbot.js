@@ -9,7 +9,7 @@ function dumpManifest(sbot, filePath) {
 }
 
 function startSbot () {
-  const path = "/Users/michael/.ssb-test"
+  const path = "./ssb-data"
   const keys = require('ssb-keys').loadOrCreateSync(path + "/secret")
 
   const config = require('ssb-config/inject')('ssb', {
@@ -27,6 +27,7 @@ function startSbot () {
   sbot =
     require('scuttlebot')
     .use(require("scuttlebot/plugins/master"))
+    .use(require("ssb-private"))
     .use(ssbIgoPlugin)
     (config)
 

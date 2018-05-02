@@ -5,17 +5,19 @@ import Prelude
 import App.Common (getClient')
 import App.IgoMsg as Msg
 import App.UI.Action (Action(..))
+import App.UI.Action as Action
 import App.UI.ClientQueries (getStream)
 import App.UI.Effect (Effect(..), runEffect)
 import App.UI.Model (Model, initialModel)
 import App.UI.Sub (Sub(..), Handler)
 import App.UI.Sub as Sub
-import App.UI.View (render)
+import App.UI.View as View
 import Control.Monad.Aff (Aff, Error, launchAff_)
 import Control.Monad.Aff.Class (liftAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, error, log) as Eff
+import Control.Monad.Eff.Ref (newRef)
 import Control.Monad.Eff.Timer (TIMER, setInterval)
 import Control.MonadZero (guard)
 import DOM (DOM)
@@ -40,22 +42,11 @@ import Spork.App as App
 import Spork.Html as H
 import Spork.Html.Elements.Keyed as K
 import Spork.Interpreter (Interpreter(..), liftNat, merge, never, throughAff)
-import Ssb.Client (getClient)
+import Ssb.Client (getClient, whoami)
 import Ssb.Config (SSB)
 import Ssb.PullStream (PullStream, drain)
 
 
-update ∷ Model -> Action -> App.Transition Effect Model Action
-update model = case _ of
-  Noop ->
-    App.purely model
-  PlaceStone ->
-    let
-      effects = App.lift (Publish (Msg.demoMsg) Noop)
-    in
-      { model, effects }
-  ReduceIgoMessage json ->
-    { model, effects: App.lift (Log ("hahaha  " <> show json) Noop) }
 
 subs :: Model -> App.Batch Sub Action
 subs _ =
@@ -63,8 +54,8 @@ subs _ =
 
 app ∷ App.App Effect Sub Model Action
 app =
-  { render
-  , update
+  { render: View.render
+  , update: Action.update
   , subs
   , init: App.purely model
   }

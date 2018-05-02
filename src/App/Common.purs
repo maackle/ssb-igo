@@ -9,8 +9,10 @@ import Ssb.Config (defaultConfig)
 
 clientConfig = do
   cfg <- defaultConfig $ Just
-            { path: "/Users/michael/.ssb-test"
+            { path: "./ssb-data"
             , keys: Nothing }
   pure cfg { port = 8088, shs = "GVZDyNf1TrZuGv3W5Dpef0vaITW1UqOUO3aWLNBp+7A=" }
 
 getClient' = getClient =<< liftEff clientConfig
+
+messageTypeString = "ssb-igo"
