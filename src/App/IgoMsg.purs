@@ -43,7 +43,7 @@ type RequestMatchPayload =
 type AcceptMatchPayload =
   {offerKey :: MsgKey, terms :: GameTerms}
 type DeclineMatchPayload =
-  {offerKey :: MsgKey, reason :: Maybe String}
+  {offerKey :: MsgKey, userKey :: UserKey, reason :: Maybe String}
 type PlayMovePayload =
   { position :: BoardPosition, lastMove :: MsgKey, subjectiveMoveNum :: Int }
 type KibitzPayload =

@@ -5,7 +5,7 @@ import Prelude
 import App.Streaming (FlumeDb, MapFn, ReduceFnImpl, initialDb, mapFn, reduceFn)
 import Control.Monad.Aff.Compat (EffFnAff(..), fromEffFnAff)
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (log)
+import Control.Monad.Eff.Console (log, info)
 import Control.Monad.Eff.Unsafe (unsafePerformEff)
 import Data.Function.Uncurried (mkFn2)
 import Ssb.Config (SSB)
@@ -21,7 +21,7 @@ ssbIgoPlugin =
   where
     init sbot = do
       view <- flumeUse sbot "ssb-igo" flumeReducer
-      log "Plugin initialized!"
+      -- info "Plugin initialized!"
       pure
         { streamDb: liveStream view
         , rawGet: _rawGet view  -- NOTE: the FFI here is hosed

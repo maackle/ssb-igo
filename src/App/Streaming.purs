@@ -33,7 +33,7 @@ initialDb =
 
 -- TODO: make newtype
 data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey}
-data IndexedDecline = IndexedDecline DeclineMatchPayload {opponentKey :: UserKey}
+data IndexedDecline = IndexedDecline DeclineMatchPayload {author :: UserKey}
 data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey}
 data IndexedAccept = IndexedAccept AcceptMatchPayload {author :: UserKey}
 
@@ -85,15 +85,15 @@ reduceFn db json =
         Just (IndexedOffer {opponentKey} meta) ->
           if author == opponentKey
             then db { offers = delete offerKey db.offers
-                    , declines = insert key (IndexedDecline payload {opponentKey}) db.declines
+                    , declines = insert key (IndexedDecline payload {author}) db.declines
                     }
             else db
 
     SsbMessage (AcknowledgeDecline targetKey) {author} ->
       case lookup targetKey db.declines of
         Nothing -> db
-        Just (IndexedDecline _ {opponentKey}) ->
-          if author == opponentKey
+        Just (IndexedDecline {userKey} meta) ->
+          if author == userKey
             then db { declines = delete targetKey db.declines }
             else db
 
