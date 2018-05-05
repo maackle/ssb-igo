@@ -6,3 +6,4 @@ dist/
 .tags*
 .psc-ide-port
 ssb-data/
+ssb-test-data/

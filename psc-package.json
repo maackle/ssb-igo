@@ -3,6 +3,8 @@
   "set": "psc-0.11.7-20180401",
   "source": "https://github.com/purescript/package-sets.git",
   "depends": [
+    "record",
+    "spec",
     "debug",
     "js-timers",
     "routing",

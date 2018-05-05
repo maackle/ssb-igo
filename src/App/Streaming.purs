@@ -8,8 +8,10 @@ import App.Utils (trace')
 import Data.Argonaut (Json, jsonNull, toObject, toString)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
+import Data.Generic (class Generic, gEq, gShow)
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap (StrMap, delete, insert, lookup)
+import Data.StrMap as M
 import Partial.Unsafe (unsafeCrashWith)
 import Ssb.Types (UserKey)
 
@@ -21,11 +23,34 @@ type FlumeDb =
   , matches :: StrMap IndexedAccept
   }
 
+initialDb :: FlumeDb
+initialDb =
+  { offers: M.empty
+  , declines: M.empty
+  , requests: M.empty
+  , matches: M.empty
+  }
+
 -- TODO: make newtype
 data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey}
 data IndexedDecline = IndexedDecline DeclineMatchPayload {opponentKey :: UserKey}
 data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey}
 data IndexedAccept = IndexedAccept AcceptMatchPayload {author :: UserKey}
+
+derive instance genericIndexedOffer :: Generic IndexedOffer
+derive instance genericIndexedDecline :: Generic IndexedDecline
+derive instance genericIndexedRequest :: Generic IndexedRequest
+derive instance genericIndexedAccept :: Generic IndexedAccept
+
+instance showIndexedOffer :: Show IndexedOffer where show = gShow
+instance showIndexedDecline :: Show IndexedDecline where show = gShow
+instance showIndexedRequest :: Show IndexedRequest where show = gShow
+instance showIndexedAccept :: Show IndexedAccept where show = gShow
+
+instance eqIndexedOffer :: Eq IndexedOffer where eq = gEq
+instance eqIndexedDecline :: Eq IndexedDecline where eq = gEq
+instance eqIndexedRequest :: Eq IndexedRequest where eq = gEq
+instance eqIndexedAccept :: Eq IndexedAccept where eq = gEq
 
 type ReduceFn = FlumeDb -> Json -> FlumeDb
 type ReduceFnImpl = Fn2 FlumeDb Json FlumeDb

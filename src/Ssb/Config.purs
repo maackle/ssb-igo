@@ -1,11 +1,5 @@
-module Ssb.Config
-  ( SSB
-  , Config
-  , Keys
-  , Caps
-  , defaultConfig
-  )
-where
+module Ssb.Config where
+
 import Prelude
 
 import Control.Monad.Eff (Eff, kind Effect)
@@ -13,10 +7,15 @@ import Data.Argonaut (class EncodeJson, Json, fromString, jsonEmptyObject, jsonN
 import Data.Argonaut.Generic.Aeson (encodeJson)
 import Data.Generic (class Generic)
 import Data.Maybe (Maybe(..))
+import Data.Record (insert)
 import Data.StrMap (StrMap)
+import Data.Symbol (SProxy(..))
 
+data Config
+  = Config ConfigData
+  | TestConfig {|TestConfigRows}
 
-type Config =
+type ConfigData =
   { path :: String
   , shs :: String
   , sign :: Maybe String
@@ -25,6 +24,14 @@ type Config =
   , keys :: Keys
   , manifest :: Maybe (StrMap String)
   }
+
+type TestConfigRows =
+  ( port :: Int
+  , host :: String
+  )
+
+addTemp :: {|TestConfigRows} -> {temp :: Boolean | TestConfigRows}
+addTemp cfg = insert (SProxy :: SProxy "temp") true cfg
 
 type Keys =
   { id :: String
@@ -46,15 +53,15 @@ type Caps =
 type DefaultConfigOpts =
   Maybe { path :: String, keys :: Maybe Keys }
 
-defaultConfig :: ∀ f. DefaultConfigOpts -> Eff (ssb :: SSB | f) Config
-defaultConfig Nothing = _defaultConfig jsonNull jsonNull
-defaultConfig (Just {path, keys}) =
+defaultConfigData :: ∀ fx. DefaultConfigOpts -> Eff (ssb :: SSB | fx) ConfigData
+defaultConfigData Nothing = _defaultConfig jsonNull jsonNull
+defaultConfigData (Just {path, keys}) =
   case keys of
     Just k -> _defaultConfig (fromString path) (encodeJsonKeys k)
     Nothing -> _defaultConfig (fromString path) jsonNull
 
 foreign import data SSB :: Effect
-foreign import _defaultConfig :: ∀ f. Json -> Json -> Eff (ssb :: SSB | f) Config
+foreign import _defaultConfig :: ∀ f. Json -> Json -> Eff (ssb :: SSB | f) ConfigData
 
 -- defaultConfig = Config
 --   { keys:

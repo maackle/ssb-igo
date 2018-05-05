@@ -2,11 +2,20 @@ const ssbClient = require('ssb-client')
 const ssbKeys = require('ssb-keys')
 const {exposeAff, exposeEff, exposePure} = require('../Ssb.Common/foreign')
 
+
+exports.props = exposePure(0, null)
+
+
+///////////////// SYNC
+
+exports.unboxPrivate = exposeEff(2, ['private', 'unbox'])
+
+//////////////// ASYNC
+
+
 exports._close = client => {
   return (error, success) => {
-    client.close(true)
-    console.log("connection closed: ", client.closed)
-    success()
+    client.close(success)
   }
 }
 
@@ -29,11 +38,9 @@ exports._getClient = config => (error, success) => {
 exports._publish = client => data =>
   (error, success) =>
     client.publish(data, (err, msg) => {
-      console.log('publisheddd: ', err, msg)
       if (err) error(err)
       else success(msg)
     })
 
-exports._publishPrivate = exposeAff(['private', 'publish'], 2)
-exports._unboxPrivate = exposeEff(['private', 'unbox'], 1)
-exports._whoami = exposeAff('whoami', 0)
+exports._publishPrivate = exposeAff(2, ['private', 'publish'])
+exports._whoami = exposeAff(0, 'whoami')

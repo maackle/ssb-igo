@@ -15,3 +15,8 @@ exports.liveStream =
   view => () => {
     return view.stream({live: true})
   }
+
+exports._rawGet =
+  view => {
+    return view.get
+  }

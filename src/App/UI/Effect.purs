@@ -2,13 +2,14 @@ module App.UI.Effect where
 import Prelude
 
 import App.Common (getClient')
-import App.IgoMsg (IgoMsg, UserKey)
+import App.IgoMsg (IgoMsg)
 import App.IgoMsg as Msg
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (CONSOLE, log)
 import DOM (DOM)
 import Data.Argonaut (Json)
 import Ssb.Config (SSB)
+import Ssb.Types (UserKey)
 
 
 data Effect a

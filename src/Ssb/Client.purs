@@ -6,15 +6,14 @@ import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Compat (EffFnAff, fromEffFnAff)
 import Control.Monad.Eff (Eff, kind Effect)
 import Data.Argonaut (Json)
-import Ssb.Config (Config, SSB)
+import Data.Foreign (Foreign, toForeign)
+import Ssb.Common (SA, SA', SE)
+import Ssb.Config (Config(..), SSB)
 import Ssb.Types (UserKey)
 
 foreign import data ClientConnection :: Type
 
-type SA f a = Aff (ssb :: SSB | f) a
-type SA' f a = EffFnAff (ssb :: SSB | f) a
-
-type SE f a = Eff (ssb :: SSB | f) a
+foreign import props :: ClientConnection -> {id :: String}
 
 -- Eff
 
@@ -26,7 +25,9 @@ close :: ∀ fx. ClientConnection -> SA fx Unit
 close = fromEffFnAff <<< _close
 
 getClient :: ∀ fx. Config -> SA fx ClientConnection
-getClient = fromEffFnAff <<< _getClient
+getClient = case _ of
+  Config cfg -> fromEffFnAff $ _getClient $ toForeign cfg
+  TestConfig cfg -> fromEffFnAff $ _getClient $ toForeign cfg
 
 publish :: ∀ fx. ClientConnection -> Json -> SA fx Json
 publish client msg = fromEffFnAff $ _publish client msg
@@ -38,7 +39,7 @@ whoami :: ∀ fx. ClientConnection -> SA fx {id :: UserKey}
 whoami = fromEffFnAff <<< _whoami
 
 foreign import _close :: ∀ fx. ClientConnection -> SA' fx Unit
-foreign import _getClient :: ∀ fx. Config -> SA' fx ClientConnection
+foreign import _getClient :: ∀ fx. Foreign -> SA' fx ClientConnection
 foreign import _publish :: ∀ fx. ClientConnection -> Json -> (SA' fx Json)
 foreign import _publishPrivate :: ∀ fx. ClientConnection -> Json -> Array UserKey -> (SA' fx Json)
 foreign import _whoami :: ∀ fx. ClientConnection -> (SA' fx {id :: UserKey})

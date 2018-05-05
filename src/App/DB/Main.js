@@ -28,3 +28,7 @@ exports.liveStream = function (view) {
     return view.stream({ live: true });
   };
 };
+
+exports._rawGet = function (view) {
+  return view.get;
+};

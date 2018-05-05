@@ -8,7 +8,7 @@ import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Data.Argonaut (JObject, Json, fromObject, fromString, toNumber, toObject, toString)
 import Data.Argonaut.Generic.Aeson (decodeJson, encodeJson)
-import Data.Either (Either(..))
+import Data.Either (Either(..), fromRight)
 import Data.Generic (class Generic)
 import Data.Int (fromNumber)
 import Data.Maybe (Maybe(..))
@@ -17,8 +17,8 @@ import Data.Unfoldable (fromMaybe)
 import Debug.Trace (traceAnyA)
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
-import Ssb.Client (close, getClient, publish, publishPrivate)
-import Ssb.Config (SSB, Config, defaultConfig)
+import Ssb.Client (ClientConnection, close, getClient, publish, publishPrivate)
+import Ssb.Config (SSB, Config)
 import Ssb.Types (MessageKey, UserKey)
 
 type SE eff a = Eff (ssb :: SSB | eff) a
@@ -78,6 +78,11 @@ publishMsg msg = do
   _ <- publish client $ toJson msg
   pure unit
 
+publishMsg' :: ∀ eff. ClientConnection -> IgoMsg -> SA eff SsbMessage
+publishMsg' client msg = do
+  msg <- publish client $ toJson msg
+  pure $ unsafePartial $ fromRight $ parseMessage msg
+
 publishPrivateMsg :: ∀ eff. IgoMsg -> Array UserKey -> SA eff Unit
 publishPrivateMsg msg recips = do
   client <- getClient'
@@ -127,9 +132,11 @@ demoOfferPayload :: UserKey -> OfferMatchPayload
 demoOfferPayload opponentKey =
   { myColor: Black
   , opponentKey
-  , terms:
-    { size: 19
-    , handicap: 0
-    , komi: 5.5
-    }
+  , terms: demoTerms
+  }
+
+demoTerms =
+  { size: 19
+  , handicap: 0
+  , komi: 5.5
   }

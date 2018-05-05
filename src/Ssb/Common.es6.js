@@ -1,33 +1,44 @@
 
 const R = require('ramda')
+const _ = require('lodash')
 
-const lookup = (sbot, path) => {
-  if (name instanceof String) path = [path]
-  return R.path(path, sbot)
+const lookup = (sbot, getter) => {
+  if (!sbot) {
+    throw Error("Scuttlebot not initialized!")
+  }
+  if (_.isString(getter)) getter = [getter]
+  if (_.isArray(getter)) {
+    return R.path(getter, sbot)
+  }
+  if (!getter) return sbot
+  return getter(sbot)
 }
 
-// exports.exposePure = (name, nargs) => {
-//   return R.curryN(nargs, lookup(sbot, name))
-// }
+exports.exposePure = (arity, getter) => {
+  if (arity == 0)
+    return sbot => sbot
+  else
+    return sbot => R.curryN(arity, lookup(sbot, getter))
+}
 
-exports.exposeAff = (name, nargs) => {
-  if (nargs == 0)
-    return sbot => (fail, pass) => lookup(sbot, name)((err, data) => err ? fail(err) : pass(data))
-  else if (nargs == 1)
-    return sbot => a => (fail, pass) => lookup(sbot, name)(a, (err, data) => err ? fail(err) : pass(data))
-  else if (nargs == 2)
-    return sbot => a => b => (fail, pass) => lookup(sbot, name)(a, b, (err, data) => err ? fail(err) : pass(data))
+exports.exposeAff = (arity, getter) => {
+  if (arity == 0)
+    return sbot => (fail, pass) => lookup(sbot, getter)((err, data) => err ? fail(err) : pass(data))
+  else if (arity == 1)
+    return sbot => a => (fail, pass) => lookup(sbot, getter)(a, (err, data) => err ? fail(err) : pass(data))
+  else if (arity == 2)
+    return sbot => a => b => (fail, pass) => lookup(sbot, getter)(a, b, (err, data) => err ? fail(err) : pass(data))
   else
     throw "exposeAff not defined for many arguments"
 }
 
-exports.exposeEff = (name, nargs) => {
-  if (nargs == 0)
-    return sbot => () => lookup(sbot, name)()
-  else if (nargs == 1)
-    return sbot => a => () => lookup(sbot, name)(a)
-  else if (nargs == 2)
-    return sbot => a => b => () => lookup(sbot, name)(a, b)
+exports.exposeEff = (arity, getter) => {
+  if (arity == 0)
+    return sbot => () => lookup(sbot, getter)()
+  else if (arity == 1)
+    return sbot => a => () => lookup(sbot, getter)(a)
+  else if (arity == 2)
+    return sbot => a => b => () => lookup(sbot, getter)(a, b)
   else
     throw "exposeEff not defined for many arguments"
 }
