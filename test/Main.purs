@@ -280,7 +280,6 @@ main = do
             match <- setupMatch alice bob Black 0
                   >>= playMove alice >>= playMove bob >>= playMove alice
             checkDb sbot \db -> do
-              traceAnyA db
               M.size db.moves `shouldEqual` 3
 
         it "updates match index" $ sesh testbot \sbot -> do
@@ -292,7 +291,7 @@ main = do
             checkDb sbot \db -> do
               let
                 moveKeys :: Maybe (Array MsgKey)
-                moveKeys = M.lookup match db.matches <#> \(IndexedMatch _ moves _) ->
+                moveKeys = M.lookup match db.matches <#> \(IndexedMatch {moves}) ->
                             moves <#> \(MoveStep {key}) -> key
               moveKeys `shouldEqual` Just [m1, m2, m3]
 
@@ -303,6 +302,13 @@ main = do
               _ <- playMove bob match
               checkDb sbot \db -> M.size db.moves `shouldEqual` 0
               _ <- playMove alice match
+              checkDb sbot \db -> M.size db.moves `shouldEqual` 1
+          it "does handicap games" $ sesh testbot \sbot ->
+            playbook2 sbot \alice bob -> do
+              match <- setupMatch alice bob Black 3
+              _ <- playMove alice match
+              checkDb sbot \db -> M.size db.moves `shouldEqual` 0
+              _ <- playMove bob match
               checkDb sbot \db -> M.size db.moves `shouldEqual` 1
 
             -- let offerData@{terms} = offerPayload bob

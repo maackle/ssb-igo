@@ -3,7 +3,7 @@ module App.Streaming where
 import Prelude
 
 import App.Common (messageTypeString)
-import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMsg(..), MsgKey, OfferMatchPayload, RequestMatchPayload, SsbMessage(SsbMessage), PlayMovePayload, parseMessage)
+import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbMessage(SsbMessage), StoneColor(..), parseMessage)
 import App.Utils (trace')
 import Data.Argonaut (Json, jsonNull, toObject, toString)
 import Data.Array (snoc)
@@ -13,6 +13,7 @@ import Data.Generic (class Generic, gEq, gShow)
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap (StrMap, delete, insert, lookup)
 import Data.StrMap as M
+import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Partial (crashWith)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
@@ -40,9 +41,17 @@ initialDb =
 data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey}
 data IndexedDecline = IndexedDecline DeclineMatchPayload {author :: UserKey}
 data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey}
-data IndexedMatch = IndexedMatch AcceptMatchPayload (Array MoveStep) {author :: UserKey}
 data IndexedMove = IndexedMove PlayMovePayload {rootAccept :: MsgKey} {author :: UserKey}
+newtype IndexedMatch = IndexedMatch
+  { acceptPayload :: AcceptMatchPayload
+  , offerPayload :: OfferMatchPayload
+  , moves :: (Array MoveStep)
+  , acceptMeta :: {author :: UserKey}
+  , offerMeta :: {author :: UserKey}
+  }
+
 newtype MoveStep = MoveStep {position :: BoardPosition, key :: MsgKey}
+type OpponentKey = UserKey
 
 derive instance genericIndexedOffer :: Generic IndexedOffer
 derive instance genericIndexedDecline :: Generic IndexedDecline
@@ -96,12 +105,20 @@ reduceFn db json =
             then db { offers = delete targetKey db.offers }
             else db
 
-    SsbMessage (AcceptMatch payload@{offerKey}) {key, author} ->
+    SsbMessage (AcceptMatch acceptPayload@{offerKey}) acceptMeta@{key} ->
       lookup offerKey db.offers
-        # maybe db \(IndexedOffer {opponentKey} meta) ->
-          if author == opponentKey
-            then db { offers = delete offerKey db.offers
-                    , matches = insert key (IndexedMatch payload [] {author}) db.matches
+        # maybe db \(IndexedOffer offerPayload@{opponentKey} offerMeta) ->
+          if acceptMeta.author == opponentKey
+            then
+              let match = IndexedMatch
+                            { acceptPayload
+                            , offerPayload
+                            , moves: []
+                            , acceptMeta: {author: acceptMeta.author}
+                            , offerMeta: {author: offerMeta.author}
+                            }
+              in db { offers = delete offerKey db.offers
+                    , matches = insert key match db.matches
                     }
             else db
 
@@ -128,24 +145,47 @@ reduceFn db json =
           -- else, get the rootAccept key from db.moves
           let rootAccept = M.lookup lastMove db.moves
                          # maybe lastMove \(IndexedMove _ {rootAccept} _) -> rootAccept
-          IndexedMatch matchPayload matchMoves matchMeta <- M.lookup rootAccept db.matches
+          IndexedMatch matchData <- M.lookup rootAccept db.matches
+
           let
-            newMoves = snoc matchMoves $ MoveStep {position, key}
-            newMatch = IndexedMatch matchPayload newMoves matchMeta
+            newMoves = snoc matchData.moves $ MoveStep {position, key}
+            newMatch = IndexedMatch $ matchData { moves = newMoves }
           pure
             $ rootAccept /\ IndexedMove payload {rootAccept} {author} /\ newMatch
 
       in case triple of
-        Just (rootAccept /\ move /\ match@(IndexedMatch _ _ meta)) ->
-          db { moves = M.insert key move db.moves
-             , matches = M.insert rootAccept match db.matches }
+        Just (rootAccept /\ move /\ match@(IndexedMatch _)) ->
+          db { moves   = M.insert key move db.moves
+             , matches = M.insert rootAccept match db.matches
+             }
         Nothing -> trace' ("move not found: " <> lastMove) db
 
     SsbMessage (Kibitz payload) _ ->
       trace' "TODO" db
 
-
   where
+
+    firstMover :: IndexedMatch -> UserKey
+    firstMover (IndexedMatch {offerPayload, offerMeta}) =
+      if (myColor == Black) == (handicap == 0)
+        then author
+        else opponentKey
+      where
+        {author} = offerMeta
+        {terms, myColor, opponentKey} = offerPayload
+        {handicap} = terms
+
+    getPlayers :: IndexedMatch -> {black :: UserKey, white :: UserKey}
+    getPlayers (IndexedMatch {offerPayload, offerMeta}) =
+      case myColor of
+        Black -> { black: author, white: opponentKey}
+        White -> { white: author, black: opponentKey}
+      where
+        {author} = offerMeta
+        {terms, myColor, opponentKey} = offerPayload
+        {handicap} = terms
+
+
     msg = case parseMessage json of
       Right m -> m
       Left err -> unsafeCrashWith ("bad message: " <> err <> ". json = " <> show json)

@@ -37,7 +37,7 @@ data IgoMsg
   | Kibitz KibitzPayload
 
 type OfferMatchPayload =
-  {terms :: GameTerms, myColor :: StoneColor, opponentKey :: String}
+  {terms :: GameTerms, myColor :: StoneColor, opponentKey :: UserKey}
 type RequestMatchPayload =
   {terms :: GameTerms}
 type AcceptMatchPayload =
@@ -71,6 +71,8 @@ data BoardPosition = BoardPosition Int Int
 derive instance genericIgoMsg :: Generic IgoMsg
 derive instance genericStoneColor :: Generic StoneColor
 derive instance genericBoardPosition :: Generic BoardPosition
+
+derive instance eqStoneColor :: Eq StoneColor
 
 publishMsg :: ∀ eff. IgoMsg -> SA eff Unit
 publishMsg msg = do
