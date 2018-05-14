@@ -20,7 +20,10 @@ map_ :: forall m a b. Functor m => m b -> (b -> a) -> m a
 map_ = flip map
 
 infixr 5 Tuple as !
+infixr 5 Tuple as &
 
+xor :: Boolean -> Boolean -> Boolean
+xor a b = a && not b || b && not a
 
 dateToString :: Date -> String
 dateToString d =

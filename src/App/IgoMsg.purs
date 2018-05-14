@@ -45,9 +45,11 @@ type AcceptMatchPayload =
 type DeclineMatchPayload =
   {offerKey :: MsgKey, userKey :: UserKey, reason :: Maybe String}
 type PlayMovePayload =
-  { position :: BoardPosition, lastMove :: MsgKey, subjectiveMoveNum :: Int }
+  { move :: IgoMove, lastMove :: MsgKey, subjectiveMoveNum :: Int }
 type KibitzPayload =
   { move :: MsgKey, text :: String }
+
+data IgoMove = PlayStone BoardPosition | Pass | Resign
 
 data SsbMessage = SsbMessage IgoMsg
   { key :: String
@@ -69,6 +71,7 @@ data StoneColor = White | Black
 data BoardPosition = BoardPosition Int Int
 
 derive instance genericIgoMsg :: Generic IgoMsg
+derive instance genericIgoMove :: Generic IgoMove
 derive instance genericStoneColor :: Generic StoneColor
 derive instance genericBoardPosition :: Generic BoardPosition
 

@@ -3,10 +3,10 @@ module Test.Main where
 import Prelude
 
 import App.DB.Main (ssbIgoPlugin)
-import App.IgoMsg (BoardPosition(..), GameTerms, IgoMsg(..), MsgKey, OfferMatchPayload, RequestMatchPayload, SsbMessage(..), StoneColor(..), publishMsg')
+import App.IgoMsg (BoardPosition(..), GameTerms, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, RequestMatchPayload, SsbMessage(..), StoneColor(..), publishMsg')
 import App.Streaming (FlumeDb, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
 import App.UI.ClientQueries (getDb)
-import App.Utils ((!))
+import App.Utils ((&))
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Aff.Console (log)
 import Control.Monad.Eff (Eff)
@@ -24,7 +24,7 @@ import Data.StrMap as M
 import Data.Traversable (sequence, traverse)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
-import Debug.Trace (traceA, traceAnyA)
+import Debug.Trace (spy, traceA, traceAnyA)
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
 import Ssb.Client (ClientConnection, close, getClient, props, whoami)
@@ -137,8 +137,8 @@ main = do
     playMove :: Conn -> MsgKey -> Aff FX MsgKey
     playMove agent lastMove = do
       let
-        position = BoardPosition 0 0
-        payload = {position, lastMove, subjectiveMoveNum: -1}
+        move = PlayStone $ BoardPosition 0 0
+        payload = {move, lastMove, subjectiveMoveNum: -1}
       (SsbMessage _ {key}) <- publishMsg' agent $ PlayMove payload
       pure key
 
@@ -278,7 +278,11 @@ main = do
         it "indexes moves" $ sesh testbot \sbot -> do
           playbook2 sbot \alice bob -> do
             match <- setupMatch alice bob Black 0
-                  >>= playMove alice >>= playMove bob >>= playMove alice
+            checkDb sbot \db -> do
+              M.size db.matches `shouldEqual` 1
+            m1 <- playMove alice match
+            m2 <- playMove bob m1
+            _ <- playMove alice m2
             checkDb sbot \db -> do
               M.size db.moves `shouldEqual` 3
 
@@ -293,7 +297,7 @@ main = do
                 moveKeys :: Maybe (Array MsgKey)
                 moveKeys = M.lookup match db.matches <#> \(IndexedMatch {moves}) ->
                             moves <#> \(MoveStep {key}) -> key
-              moveKeys `shouldEqual` Just [m1, m2, m3]
+              moveKeys `shouldEqual` Just [m1, m2]
 
         describe "first move detection" do
           it "does even games" $ sesh testbot \sbot ->

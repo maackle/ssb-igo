@@ -3,18 +3,20 @@ module App.Streaming where
 import Prelude
 
 import App.Common (messageTypeString)
-import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbMessage(SsbMessage), StoneColor(..), parseMessage)
-import App.Utils (trace')
+import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbMessage(SsbMessage), StoneColor(..), parseMessage)
+import App.Utils (trace', (&))
 import Data.Argonaut (Json, jsonNull, toObject, toString)
-import Data.Array (snoc)
+import Data.Array (length, snoc)
 import Data.Either (Either(..))
 import Data.Function.Uncurried (Fn2)
 import Data.Generic (class Generic, gEq, gShow)
 import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.StrMap (StrMap, delete, insert, lookup)
 import Data.StrMap as M
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
+import Debug.Trace (spy, trace, traceAny)
 import Partial (crashWith)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 import Ssb.Types (UserKey)
@@ -49,8 +51,9 @@ newtype IndexedMatch = IndexedMatch
   , acceptMeta :: {author :: UserKey}
   , offerMeta :: {author :: UserKey}
   }
+derive instance newtypeIndexedMatch :: Newtype IndexedMatch _
 
-newtype MoveStep = MoveStep {position :: BoardPosition, key :: MsgKey}
+newtype MoveStep = MoveStep {move :: IgoMove, key :: MsgKey}
 type OpponentKey = UserKey
 
 derive instance genericIndexedOffer :: Generic IndexedOffer
@@ -138,42 +141,92 @@ reduceFn db json =
             then db { declines = delete targetKey db.declines }
             else db
 
-    SsbMessage (PlayMove payload@{position, lastMove}) {author, key} ->
+    SsbMessage (PlayMove payload@{move, lastMove}) {author, key} ->
       let
-        triple = do
-          -- if no moves so far, then lastMove refers to the root Accept message
-          -- else, get the rootAccept key from db.moves
-          let rootAccept = M.lookup lastMove db.moves
-                         # maybe lastMove \(IndexedMove _ {rootAccept} _) -> rootAccept
-          IndexedMatch matchData <- M.lookup rootAccept db.matches
+        -- there was a last move?
+        maybePrev = M.lookup lastMove db.moves
+        -- ascertain root accept key
+        rootAccept = maybePrev # maybe lastMove \(IndexedMove _ d _) -> d.rootAccept
+        -- look up the match based on root accept
+        _ = traceAny maybePrev
+        _ = traceAny rootAccept
+        match = case M.lookup rootAccept db.matches of
+          Just m -> m
+          Nothing -> unsafeCrashWith $ "can't find match: " <> rootAccept
 
-          let
-            newMoves = snoc matchData.moves $ MoveStep {position, key}
-            newMatch = IndexedMatch $ matchData { moves = newMoves }
-          pure
-            $ rootAccept /\ IndexedMove payload {rootAccept} {author} /\ newMatch
+        moveError = validateMove match payload author
+      in
+        case moveError of
+          Nothing ->
+            let
+              newMove = IndexedMove payload {rootAccept} {author}
+              moveStep = MoveStep {move, key}
+              newMatch = match # unwrap >>> (\m -> m { moves = snoc m.moves moveStep }) >>> wrap
+            in db { moves   = M.insert key newMove db.moves
+                  , matches = M.insert rootAccept newMatch db.matches}
+          Just err ->
+            trace ("move validation error: " <> err) $ const db
 
-      in case triple of
-        Just (rootAccept /\ move /\ match@(IndexedMatch _)) ->
-          db { moves   = M.insert key move db.moves
-             , matches = M.insert rootAccept match db.matches
-             }
-        Nothing -> trace' ("move not found: " <> lastMove) db
+      --
+      --
+      --   newMatch = maybeMatch <#> unwrap >>> \d -> d { moves = snoc d.moves (MoveStep {move, key}) } >>> wrap
+      --
+      --   triple = do
+      --     -- if no moves so far, then lastMove refers to the root Accept message
+      --     -- else, get the rootAccept key from db.moves
+      --     let rootAccept = M.lookup lastMove db.moves
+      --                    # maybe lastMove \(IndexedMove _ {rootAccept} _) -> rootAccept
+      --     IndexedMatch matchData <- M.lookup rootAccept db.matches
+      --
+      --     let
+      --       newMoves = snoc matchData.moves $ MoveStep {move, key}
+      --       newMatch = IndexedMatch $ matchData { moves = newMoves }
+      --     pure
+      --       $ rootAccept & IndexedMove payload {rootAccept} {author} & newMatch
+      --
+      -- in case triple of
+      --   Just (rootAccept /\ move /\ match@(IndexedMatch _)) ->
+      --     db { moves   = M.insert key move db.moves
+      --        , matches = M.insert rootAccept match db.matches
+      --        }
+      --   Nothing -> trace' ("move not found: " <> lastMove) db
+      --
+
+
+
 
     SsbMessage (Kibitz payload) _ ->
       trace' "TODO" db
 
   where
 
-    firstMover :: IndexedMatch -> UserKey
-    firstMover (IndexedMatch {offerPayload, offerMeta}) =
-      if (myColor == Black) == (handicap == 0)
-        then author
-        else opponentKey
+    nextMover :: FlumeDb -> IndexedMatch -> PlayMovePayload -> UserKey
+    nextMover db (IndexedMatch {offerPayload, offerMeta, moves}) movePayload@{lastMove} =
+      method2
       where
         {author} = offerMeta
         {terms, myColor, opponentKey} = offerPayload
         {handicap} = terms
+        firstMover = if (myColor == Black) == (handicap == 0)
+                        then author
+                        else opponentKey
+        method2 = case M.lookup lastMove db.moves of
+                    Just (IndexedMove _ _ lastMeta) -> if author == lastMeta.author then opponentKey else author
+                    Nothing -> firstMover
+
+    validateMove :: IndexedMatch -> PlayMovePayload -> UserKey -> Maybe String
+    validateMove match@(IndexedMatch {offerPayload, offerMeta, moves}) movePayload@{move, lastMove} author =
+      case move of
+        PlayStone position ->
+          if author == nextMover db match movePayload then Nothing else Just $ "not your turn to move! " <> author
+        Pass ->
+          if author == nextMover db match movePayload then Nothing else Just "not your turn to pass!"
+        Resign ->
+          Nothing
+      where
+        {terms, myColor} = offerPayload
+        {handicap} = terms
+        {black, white} = getPlayers match
 
     getPlayers :: IndexedMatch -> {black :: UserKey, white :: UserKey}
     getPlayers (IndexedMatch {offerPayload, offerMeta}) =
