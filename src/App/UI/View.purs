@@ -3,8 +3,10 @@ module App.UI.View where
 import Prelude
 
 import App.IgoMsg (IgoMsg(..), demoOfferPayload)
+import App.Streaming (encodeFlumeDb)
 import App.UI.Action (Action(..))
-import App.UI.Model (Model)
+import App.UI.Model (FlumeState(..), Model)
+import Global.Unsafe (unsafeStringify)
 import Spork.Html as H
 import Spork.Html.Elements.Keyed as K
 
@@ -18,5 +20,11 @@ render model =
     [ H.button [H.onClick $ H.always_ (PlaceStone)] [ H.text "publish public"]
     , H.button
       [ H.onClick $ H.always_ (CreateOffer testIdentity demoOffer ) ]
-      [ H.text "publish private" ]
+      [ H.text "publish private!" ]
+    , H.pre []
+      [ H.text (showDb)]
     ]
+  where
+    showDb = case model.flume of
+      FlumeDb d -> show $ encodeFlumeDb d
+      d -> unsafeStringify d

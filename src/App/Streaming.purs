@@ -3,80 +3,56 @@ module App.Streaming where
 import Prelude
 
 import App.Common (messageTypeString)
-import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbMessage(SsbMessage), StoneColor(..), parseMessage)
+import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbMessage(..), StoneColor(..), parseMessage)
+import App.UI.Model (FlumeData, FlumeState(..), IndexedDecline(..), IndexedMatch(..), IndexedMove(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
 import App.Utils (trace', (&))
-import Data.Argonaut (Json, jsonNull, toObject, toString)
+import Data.Argonaut (Json, fromObject, jsonNull, toObject, toString)
+import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
 import Data.Array (length, snoc)
-import Data.Either (Either(..))
+import Data.Either (Either(..), hush)
+import Data.Foreign (Foreign, toForeign)
 import Data.Function.Uncurried (Fn2)
 import Data.Generic (class Generic, gEq, gShow)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), fromJust, maybe)
 import Data.Newtype (class Newtype, unwrap, wrap)
-import Data.StrMap (StrMap, delete, insert, lookup)
+import Data.StrMap (StrMap, delete, fromFoldable, insert, lookup)
 import Data.StrMap as M
+import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
-import Debug.Trace (spy, trace, traceAny)
+import Debug.Trace (spy, trace, traceA, traceAny, traceAnyA)
+import Global.Unsafe (unsafeStringify)
 import Partial (crashWith)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 import Ssb.Types (UserKey)
 
 
-type FlumeDb =
-  { offers :: StrMap IndexedOffer
-  , declines :: StrMap IndexedDecline
-  , requests :: StrMap IndexedRequest
-  , matches :: StrMap IndexedMatch
-  , moves :: StrMap IndexedMove
-  }
 
-initialDb :: FlumeDb
-initialDb =
-  { offers: M.empty
-  , declines: M.empty
-  , requests: M.empty
-  , matches: M.empty
-  , moves: M.empty
-  }
+decodeFlumeDb :: Json -> Maybe FlumeData
+decodeFlumeDb json = do
+  o <- toObject json
+  offers <- M.lookup "offers" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
+  requests <- M.lookup "requests" o >>= toObject >>= (map (spy >>> decodeJson >>> spy >>> hush) >>> sequence)
+  declines <- M.lookup "declines" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
+  matches <- M.lookup "matches" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
+  moves <- M.lookup "moves" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
+  pure $ { offers, requests, declines, matches, moves }
 
--- TODO: make newtype
-data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey}
-data IndexedDecline = IndexedDecline DeclineMatchPayload {author :: UserKey}
-data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey}
-data IndexedMove = IndexedMove PlayMovePayload {rootAccept :: MsgKey} {author :: UserKey}
-newtype IndexedMatch = IndexedMatch
-  { acceptPayload :: AcceptMatchPayload
-  , offerPayload :: OfferMatchPayload
-  , moves :: (Array MoveStep)
-  , acceptMeta :: {author :: UserKey}
-  , offerMeta :: {author :: UserKey}
-  }
-derive instance newtypeIndexedMatch :: Newtype IndexedMatch _
+maybeToFlumeState :: String -> Maybe FlumeData -> FlumeState
+maybeToFlumeState err = maybe (FlumeFailure err) FlumeDb
 
-newtype MoveStep = MoveStep {move :: IgoMove, key :: MsgKey}
-type OpponentKey = UserKey
+encodeFlumeDb :: FlumeData -> Json
+encodeFlumeDb db =
+  fromObject $ fromFoldable
+    [ "offers" & (fromObject $ map encodeJson db.offers)
+    , "requests" & (fromObject $ map encodeJson db.requests)
+    , "declines" & (fromObject $ map encodeJson db.declines)
+    , "matches" & (fromObject $ map encodeJson db.matches)
+    , "moves" & (fromObject $ map encodeJson db.moves)
+    ]
 
-derive instance genericIndexedOffer :: Generic IndexedOffer
-derive instance genericIndexedDecline :: Generic IndexedDecline
-derive instance genericIndexedRequest :: Generic IndexedRequest
-derive instance genericIndexedMatch :: Generic IndexedMatch
-derive instance genericIndexedMove :: Generic IndexedMove
-derive instance genericMoveStep :: Generic MoveStep
-
-instance showIndexedOffer :: Show IndexedOffer where show = gShow
-instance showIndexedDecline :: Show IndexedDecline where show = gShow
-instance showIndexedRequest :: Show IndexedRequest where show = gShow
-instance showIndexedMatch :: Show IndexedMatch where show = gShow
-instance showIndexedMove :: Show IndexedMove where show = gShow
-
-instance eqIndexedOffer :: Eq IndexedOffer where eq = gEq
-instance eqIndexedDecline :: Eq IndexedDecline where eq = gEq
-instance eqIndexedRequest :: Eq IndexedRequest where eq = gEq
-instance eqIndexedMatch :: Eq IndexedMatch where eq = gEq
-instance eqIndexedMove :: Eq IndexedMove where eq = gEq
-
-type ReduceFn = FlumeDb -> Json -> FlumeDb
-type ReduceFnImpl = Fn2 FlumeDb Json FlumeDb
+type ReduceFn = FlumeData -> Json -> FlumeData
+type ReduceFnImpl = Fn2 Json Json Json
 type MapFn = Json -> Json
 
 data MessageType
@@ -86,8 +62,10 @@ data MessageType
 
 
 reduceFn :: ReduceFn
-reduceFn db json =
+reduceFn (db) json =
   case msg of
+    UnknownMessage -> db
+
     SsbMessage (RequestMatch payload) {key, author} ->
       db { requests = insert key (IndexedRequest payload {author}) db.requests }
 
@@ -163,7 +141,7 @@ reduceFn db json =
               moveStep = MoveStep {move, key}
               newMatch = match # unwrap >>> (\m -> m { moves = snoc m.moves moveStep }) >>> wrap
             in db { moves   = M.insert key newMove db.moves
-                  , matches = M.insert rootAccept newMatch db.matches}
+                  , matches = M.insert rootAccept newMatch db.matches }
           Just err ->
             trace ("move validation error: " <> err) $ const db
 
@@ -192,16 +170,13 @@ reduceFn db json =
       --   Nothing -> trace' ("move not found: " <> lastMove) db
       --
 
-
-
-
     SsbMessage (Kibitz payload) _ ->
       trace' "TODO" db
 
   where
 
-    nextMover :: FlumeDb -> IndexedMatch -> PlayMovePayload -> UserKey
-    nextMover db (IndexedMatch {offerPayload, offerMeta, moves}) movePayload@{lastMove} =
+    nextMover :: IndexedMatch -> PlayMovePayload -> UserKey
+    nextMover (IndexedMatch {offerPayload, offerMeta, moves}) movePayload@{lastMove} =
       method2
       where
         {author} = offerMeta
@@ -218,9 +193,9 @@ reduceFn db json =
     validateMove match@(IndexedMatch {offerPayload, offerMeta, moves}) movePayload@{move, lastMove} author =
       case move of
         PlayStone position ->
-          if author == nextMover db match movePayload then Nothing else Just $ "not your turn to move! " <> author
+          if author == nextMover match movePayload then Nothing else Just $ "not your turn to move! " <> author
         Pass ->
-          if author == nextMover db match movePayload then Nothing else Just "not your turn to pass!"
+          if author == nextMover match movePayload then Nothing else Just "not your turn to pass!"
         Resign ->
           Nothing
       where
@@ -241,7 +216,7 @@ reduceFn db json =
 
     msg = case parseMessage json of
       Right m -> m
-      Left err -> unsafeCrashWith ("bad message: " <> err <> ". json = " <> show json)
+      Left err -> trace ("bad message: " <> err <> ". json = " <> show json) $ const UnknownMessage
 
 mapFn :: MapFn
 mapFn json = if isValidMessage json then json else trace' ("dropped message: " <> show json) jsonNull

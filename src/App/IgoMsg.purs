@@ -7,7 +7,7 @@ import App.Utils (lookup', lookup_, maybeToEither, toObject')
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Data.Argonaut (JObject, Json, fromObject, fromString, toNumber, toObject, toString)
-import Data.Argonaut.Generic.Aeson (decodeJson, encodeJson)
+import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
 import Data.Either (Either(..), fromRight)
 import Data.Generic (class Generic)
 import Data.Int (fromNumber)
@@ -51,14 +51,16 @@ type KibitzPayload =
 
 data IgoMove = PlayStone BoardPosition | Pass | Resign
 
-data SsbMessage = SsbMessage IgoMsg
-  { key :: String
-  , previous :: Maybe String
-  , author :: String
-  , timestamp :: Number  -- inner timestamp
-  , hash :: String
-  , signature :: String
-  }
+data SsbMessage
+  = UnknownMessage
+  | SsbMessage IgoMsg
+    { key :: String
+    , previous :: Maybe String
+    , author :: String
+    , timestamp :: Number  -- inner timestamp
+    , hash :: String
+    , signature :: String
+    }
 
 type GameTerms =
   { size :: Int

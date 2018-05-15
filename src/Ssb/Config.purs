@@ -4,7 +4,7 @@ import Prelude
 
 import Control.Monad.Eff (Eff, kind Effect)
 import Data.Argonaut (class EncodeJson, Json, fromString, jsonEmptyObject, jsonNull, (:=), (~>))
-import Data.Argonaut.Generic.Aeson (encodeJson)
+import Data.Argonaut.Generic.Argonaut (encodeJson)
 import Data.Generic (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Record (insert)

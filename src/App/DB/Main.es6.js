@@ -7,6 +7,11 @@ exports.mkFlumeReducer =
     return Reduce(version, reducer, mapper, null, initial)
   }
 
+exports.mkFlumeReducer1 =
+  version => reducer => mapper => codec => initial => {
+    return Reduce(version, reducer, mapper, codec, initial)
+  }
+
 exports.flumeUse =
   sbot => indexName => view => () =>
     sbot._flumeUse(indexName, view)

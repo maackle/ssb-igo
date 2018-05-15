@@ -13,6 +13,18 @@ exports.mkFlumeReducer = function (version) {
   };
 };
 
+exports.mkFlumeReducer1 = function (version) {
+  return function (reducer) {
+    return function (mapper) {
+      return function (codec) {
+        return function (initial) {
+          return Reduce(version, reducer, mapper, codec, initial);
+        };
+      };
+    };
+  };
+};
+
 exports.flumeUse = function (sbot) {
   return function (indexName) {
     return function (view) {

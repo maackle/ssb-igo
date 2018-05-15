@@ -50,7 +50,7 @@ import Ssb.PullStream (PullStream, drain)
 
 subs :: Model -> App.Batch Sub Action
 subs _ =
-  App.lift $ ReceiveSsbMessage ReduceIgoMessage
+  App.lift $ ReceiveSsbMessage UpdateFlume
 
 app ∷ App.App Effect Sub Model Action
 app =
