@@ -33,19 +33,19 @@ interpreter listenWith = Interpreter $ EventQueue.withAccum spec
     spec :: EventQueueInstance (E eff) o -> E eff (EventQueueAccum (E eff) Boolean (Sub o))
     spec queue = pure { init, update, commit }
       where
-        getHandler :: Sub o -> Handler eff
-        getHandler sub json =
-          case sub of
-            ReceiveSsbMessage k -> do
-              traceA ("ReceiveSsbMessage: " <> (show json))
-              queue.push (k json)
-              queue.run
-              pure true
+        getHandler :: (Json -> o) -> Handler eff
+        getHandler k json = do
+          traceA ("ReceiveSsbMessage: " <> (show json))
+          queue.push (k json)
+          queue.run
+          pure true
 
         init = false
 
-        update started sub = do
-          when (not started) $ listenWith $ getHandler sub
-          pure true
+        update started sub =
+          case sub of
+            ReceiveSsbMessage k -> do
+              when (not started) $ listenWith $ getHandler k
+              pure true
 
         commit = pure

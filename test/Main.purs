@@ -4,7 +4,7 @@ import Prelude
 
 import App.DB.Main (ssbIgoPlugin)
 import App.IgoMsg (BoardPosition(..), GameTerms, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, RequestMatchPayload, SsbMessage(..), StoneColor(..), publishMsg')
-import App.Streaming (FlumeDb, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
+import App.UI.Model (FlumeData, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
 import App.UI.ClientQueries (getDb)
 import App.Utils ((&))
 import Control.Monad.Aff (Aff, attempt)
@@ -74,12 +74,12 @@ sesh create runTest = do
   close sbot
   either (liftEff <<< throwException) pure result
 
-checkDb :: ClientConnection -> (FlumeDb -> Aff FX Unit) -> Aff FX Unit
+checkDb :: ClientConnection -> (FlumeData -> Aff FX Unit) -> Aff FX Unit
 checkDb sbot check = do
   db <- getDb sbot
   check db
 
-pubAndCheckDb :: ClientConnection -> IgoMsg -> (SsbMessage -> FlumeDb -> Aff FX Unit) -> Aff FX Unit
+pubAndCheckDb :: ClientConnection -> IgoMsg -> (SsbMessage -> FlumeData -> Aff FX Unit) -> Aff FX Unit
 pubAndCheckDb sbot m check = do
   msg <- publishMsg' sbot m
   db <- getDb sbot
@@ -171,6 +171,7 @@ main = do
             (SsbMessage _ {author, key}) <- publishMsg' alice $ RequestMatch requestPayload
             db <- getDb sbot
             M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author})
+        pending "only allows one request per user"
 
       describe "ExpireRequest" do
         it "only cancels requests from original author" $ sesh testbot \sbot -> do

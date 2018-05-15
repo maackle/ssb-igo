@@ -13,6 +13,7 @@ import Ssb.Types (UserKey)
 
 type Model =
   { flume :: FlumeState
+  , whoami :: Maybe UserKey
   }
 
 data FlumeState
@@ -41,6 +42,7 @@ initialDb =
 initialModel :: Model
 initialModel =
   { flume: FlumeUnloaded
+  , whoami: Nothing
   }
 
 

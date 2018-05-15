@@ -12,7 +12,7 @@ import App.UI.Model (Model, initialModel)
 import App.UI.Sub (Sub(..), Handler)
 import App.UI.Sub as Sub
 import App.UI.View as View
-import Control.Monad.Aff (Aff, Error, launchAff_)
+import Control.Monad.Aff (Aff, Error, launchAff_, runAff_)
 import Control.Monad.Aff.Class (liftAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -87,6 +87,11 @@ main = do
     F.for_ (routeAction newHash) \i -> do
       inst.push i
       inst.run
+
+  runAff_ (const $ pure unit) $ do
+    {id} <- whoami =<< getClient'
+    liftEff $ inst.push (InitState {id})
+    liftEff inst.run
 
   where
     effectInterpreter :: ∀ i. Interpreter (Eff FX) Effect i

@@ -8,7 +8,7 @@ import App.Streaming (decodeFlumeDb, mapFn, maybeToFlumeState, reduceFn)
 import App.UI.Effect (Effect(..))
 import App.UI.Model (FlumeState(..), Model)
 import Data.Argonaut (Json, jsonNull)
-import Data.Maybe (maybe)
+import Data.Maybe (Maybe(..), maybe)
 import Debug.Trace (spy, traceAny)
 import Spork.App (lift)
 import Spork.App as App
@@ -17,6 +17,7 @@ import Ssb.Types (UserKey)
 data Action
   = Noop
   | UpdateFlume Json
+  | InitState {id :: UserKey}
   | PlaceStone
   | CreateOffer UserKey OfferMatchPayload
 
@@ -24,6 +25,8 @@ update ∷ Model -> Action -> App.Transition Effect Model Action
 update model = case _ of
   Noop ->
     App.purely model
+  InitState {id} ->
+    App.purely $ model { whoami = Just id }
   UpdateFlume json -> traceAny json \_ ->
     App.purely $ case model.flume of
       FlumeFailure _ -> model

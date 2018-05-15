@@ -9,7 +9,8 @@ import App.Utils (trace', (&))
 import Data.Argonaut (Json, fromObject, jsonNull, toObject, toString)
 import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
 import Data.Array (length, snoc)
-import Data.Either (Either(..), hush)
+import Data.Bifunctor (lmap)
+import Data.Either (Either(..), either, hush)
 import Data.Foreign (Foreign, toForeign)
 import Data.Function.Uncurried (Fn2)
 import Data.Generic (class Generic, gEq, gShow)
@@ -63,8 +64,7 @@ data MessageType
 
 reduceFn :: ReduceFn
 reduceFn (db) json =
-  case msg of
-    UnknownMessage -> db
+  reduceRight $ case _ of
 
     SsbMessage (RequestMatch payload) {key, author} ->
       db { requests = insert key (IndexedRequest payload {author}) db.requests }
@@ -145,35 +145,13 @@ reduceFn (db) json =
           Just err ->
             trace ("move validation error: " <> err) $ const db
 
-      --
-      --
-      --   newMatch = maybeMatch <#> unwrap >>> \d -> d { moves = snoc d.moves (MoveStep {move, key}) } >>> wrap
-      --
-      --   triple = do
-      --     -- if no moves so far, then lastMove refers to the root Accept message
-      --     -- else, get the rootAccept key from db.moves
-      --     let rootAccept = M.lookup lastMove db.moves
-      --                    # maybe lastMove \(IndexedMove _ {rootAccept} _) -> rootAccept
-      --     IndexedMatch matchData <- M.lookup rootAccept db.matches
-      --
-      --     let
-      --       newMoves = snoc matchData.moves $ MoveStep {move, key}
-      --       newMatch = IndexedMatch $ matchData { moves = newMoves }
-      --     pure
-      --       $ rootAccept & IndexedMove payload {rootAccept} {author} & newMatch
-      --
-      -- in case triple of
-      --   Just (rootAccept /\ move /\ match@(IndexedMatch _)) ->
-      --     db { moves   = M.insert key move db.moves
-      --        , matches = M.insert rootAccept match db.matches
-      --        }
-      --   Nothing -> trace' ("move not found: " <> lastMove) db
-      --
-
     SsbMessage (Kibitz payload) _ ->
       trace' "TODO" db
 
   where
+
+    msg = parseMessage json # lmap \err -> trace ("bad message: " <> err <> ". json = " <> show json)
+    reduceRight f = either (const db) f msg
 
     nextMover :: IndexedMatch -> PlayMovePayload -> UserKey
     nextMover (IndexedMatch {offerPayload, offerMeta, moves}) movePayload@{lastMove} =
@@ -212,11 +190,6 @@ reduceFn (db) json =
         {author} = offerMeta
         {terms, myColor, opponentKey} = offerPayload
         {handicap} = terms
-
-
-    msg = case parseMessage json of
-      Right m -> m
-      Left err -> trace ("bad message: " <> err <> ". json = " <> show json) $ const UnknownMessage
 
 mapFn :: MapFn
 mapFn json = if isValidMessage json then json else trace' ("dropped message: " <> show json) jsonNull

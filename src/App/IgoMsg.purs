@@ -52,8 +52,7 @@ type KibitzPayload =
 data IgoMove = PlayStone BoardPosition | Pass | Resign
 
 data SsbMessage
-  = UnknownMessage
-  | SsbMessage IgoMsg
+  = SsbMessage IgoMsg
     { key :: String
     , previous :: Maybe String
     , author :: String
