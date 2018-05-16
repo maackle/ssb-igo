@@ -5,8 +5,12 @@ import Prelude
 import App.IgoMsg (IgoMsg(..), demoOfferPayload)
 import App.Streaming (encodeFlumeDb)
 import App.UI.Action (Action(..))
-import App.UI.Model (FlumeState(..), IndexedRequest(..), Model)
+import App.UI.Model (FlumeState(..), IndexedRequest(..), Model, EzModel, ezify)
+import Data.Foldable (find)
+import Data.Maybe (Maybe(..))
+import Data.StrMap (toUnfoldable)
 import Data.StrMap as M
+import Data.Tuple (Tuple(..))
 import Global.Unsafe (unsafeStringify)
 import Spork.Html as H
 import Spork.Html.Elements.Keyed as K
@@ -17,35 +21,44 @@ demoOffer = demoOfferPayload otherIdentity
 
 render :: Model -> H.Html Action
 render model =
-  H.div []
-    [ dashboard model
-    , H.button [H.onClick $ H.always_ (PlaceStone)] [ H.text "publish public"]
-    , H.button
-      [ H.onClick $ H.always_ (CreateOffer testIdentity demoOffer ) ]
-      [ H.text "publish private" ]
-    , H.pre []
-      [ H.text (unsafeStringify model)]
-    ]
+  case ezify model of
+    Nothing -> H.div []
+      [ H.h1 [] [H.text "app loading..."]
+      , H.pre []
+        [ H.text (unsafeStringify model)]
+      ]
+    Just ez ->
+      H.div []
+        [ dashboard ez
+        , H.button [H.onClick $ H.always_ (PlaceStone)] [ H.text "publish public"]
+        , H.button
+          [ H.onClick $ H.always_ (CreateOffer testIdentity demoOffer ) ]
+          [ H.text "publish private" ]
+        ]
   where
     showDb = case model.flume of
       FlumeDb d -> show $ encodeFlumeDb d
       d -> unsafeStringify d
 
-dashboard :: Model -> H.Html Action
-dashboard model = case model.flume of
-  FlumeDb db ->
-    let
-      _ = 1
-    in
-      H.div []
-        [ H.section []
-          [ H.h1 [] [H.text "requests"]
-          , H.ul [] (map requestLine $ M.values db.requests) ]
-        ]
-  FlumeUnloaded ->
-    H.text "Loading..."
-  FlumeFailure err ->
-    H.text $ err <> ". Try reloading. "
+dashboard :: EzModel -> H.Html Action
+dashboard ez@{db} =
+  H.div []
+    [ H.section []
+      [ H.h1 [] [H.text "requests"]
+      , myRequest ez
+      ]
+    ]
+
+myRequest {db, whoami} =
+  case r of
+    Just request@(IndexedRequest {terms} {key}) ->
+      requestLine request
+    Nothing ->
+      H.text "make a request?"
+  where
+    r = (M.values db.requests) # find \(IndexedRequest d {author}) ->
+      author == whoami
+
 
 requestLine (IndexedRequest {terms} _) =
   H.li [] [H.text $ show terms.size]

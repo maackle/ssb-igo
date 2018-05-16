@@ -16,6 +16,16 @@ type Model =
   , whoami :: Maybe UserKey
   }
 
+type EzModel =
+  { db :: FlumeData
+  , whoami :: UserKey}
+
+ezify :: Model -> Maybe EzModel
+ezify model =
+  case model.flume, model.whoami of
+    FlumeDb db, Just whoami -> Just {db, whoami}
+    _, _ -> Nothing
+
 data FlumeState
   = FlumeDb FlumeData
   | FlumeUnloaded
@@ -49,7 +59,7 @@ initialModel =
 -- TODO: make newtype
 data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey}
 data IndexedDecline = IndexedDecline DeclineMatchPayload {author :: UserKey}
-data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey}
+data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey, key :: MsgKey}
 data IndexedMove = IndexedMove PlayMovePayload {rootAccept :: MsgKey} {author :: UserKey}
 newtype IndexedMatch = IndexedMatch
   { acceptPayload :: AcceptMatchPayload

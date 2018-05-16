@@ -67,7 +67,7 @@ reduceFn (db) json =
   reduceRight $ case _ of
 
     SsbMessage (RequestMatch payload) {key, author} ->
-      db { requests = insert key (IndexedRequest payload {author}) db.requests }
+      db { requests = insert key (IndexedRequest payload {key, author}) db.requests }
 
     SsbMessage (ExpireRequest targetKey) {author} ->
       lookup targetKey db.requests
