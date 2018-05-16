@@ -26,7 +26,7 @@ import Test.Spec.Assertions (shouldEqual, shouldNotEqual)
 import Test.Spec.Reporter (consoleReporter)
 import Test.Spec.Runner (RunnerEffects, run)
 
-tempConfig = TestConfig { port: 5432, host: "0.0.0.0" }
+tempConfig = TestConfig { port: 7531, host: "0.0.0.0" }
 normalConfig = do
   cfg <- defaultConfigData $ Just
             { path: "./ssb-test-data"
@@ -151,15 +151,15 @@ main = do
 
     describe "ssb-igo" do
       it "has a db" $ sesh testbot \sbot -> do
-        db <- getDb sbot
-        db.offers `shouldEqual` M.empty
+        checkDb sbot \db ->
+          db.offers `shouldEqual` M.empty
 
       describe "RequestMatch" do
         it "indexes requests" $ sesh testbot \sbot -> do
           playbook1 sbot \alice -> do
             (SsbMessage _ {author, key}) <- publishMsg' alice $ RequestMatch requestPayload
-            db <- getDb sbot
-            M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author, key})
+            checkDb sbot \db -> do
+              M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author, key})
         pending "only allows one request per user"
 
       describe "ExpireRequest" do
@@ -167,16 +167,16 @@ main = do
           playbook2 sbot \alice bob -> do
             (SsbMessage _ {author, key}) <- publishMsg' alice $ RequestMatch requestPayload
             let expected = IndexedRequest requestPayload {author, key}
-            db <- getDb sbot
-            M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author, key})
+            checkDb sbot \db ->
+              M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author, key})
 
             (SsbMessage _ meta2) <- publishMsg' bob $ ExpireRequest key
-            db <- getDb sbot
-            M.values db.requests `shouldEqual` [expected]
+            checkDb sbot \db ->
+              M.values db.requests `shouldEqual` [expected]
 
             (SsbMessage _ meta2) <- publishMsg' alice $ ExpireRequest key
-            db <- getDb sbot
-            db.requests `shouldEqual` M.empty
+            checkDb sbot \db ->
+              db.requests `shouldEqual` M.empty
 
       describe "OfferMatch" do
         it "indexes offers" $ sesh testbot \sbot -> do
