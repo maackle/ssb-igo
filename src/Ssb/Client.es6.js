@@ -1,5 +1,4 @@
 const ssbClient = require('ssb-client')
-const ssbKeys = require('ssb-keys')
 const {exposeAff, exposeEff, exposePure} = require('../Ssb.Common/foreign')
 
 

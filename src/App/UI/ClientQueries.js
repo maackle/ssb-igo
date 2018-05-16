@@ -16,5 +16,10 @@ exports._getDb = function (client) {
     return client.ssbIgo.rawGet(function (err, val) {
       return err ? fail(err) : pass(val);
     });
-  };
+  }
+
+  // exports._testFeed =
+  //   client => path => (fail, pass) =>
+  //     client.ssbIgo.rawTestFeed(path, (err, val) => err ? fail(err) : pass(val))
+  ;
 };

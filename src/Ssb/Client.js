@@ -1,7 +1,6 @@
 'use strict';
 
 var ssbClient = require('ssb-client');
-var ssbKeys = require('ssb-keys');
 
 var _require = require('../Ssb.Common/foreign');
 

@@ -18,9 +18,11 @@ import Data.StrMap as M
 import Debug.Trace (spy, trace, traceA, traceAny, traceAnyA)
 import Global.Unsafe (unsafeStringify)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
+import Ssb.Client (ClientConnection)
 import Ssb.Config (SSB)
+import Ssb.Keys (loadOrCreateSync)
 import Ssb.PullStream (PullStream)
-import Ssb.Server (Plugin, toPlugin)
+import Ssb.Server (Plugin, createFeed, createFeed', createFeedRemote', toPlugin)
 
 ssbIgoPlugin =
   { init: \sbot -> unsafePerformEff $ init sbot
@@ -31,15 +33,19 @@ ssbIgoPlugin =
   where
     init sbot = do
       view <- flumeUse sbot "ssb-igo" flumeReducer
-      -- info "Plugin initialized!"
-      pure
-        { streamDb: liveStream view
-        , rawGet: _rawGet view  -- NOTE: the FFI here is hosed
-        }
+      pure { streamDb: liveStream view
+           , rawGet:  _rawGet view  -- NOTE: the FFI here is hosed
+           -- , rawTestFeed: rawTestFeed
+           }
+      where
+          rawTestFeed path = unsafePerformEff do
+            keys <- loadOrCreateSync path
+            createFeedRemote' sbot keys
 
     manifest =
       { "streamDb": "source"
       , "rawGet": "async"
+      -- , "rawTestFeed": "sync"
       }
 
 flumeReducer :: FlumeReducer
@@ -70,10 +76,10 @@ flumeReducer = mkFlumeReducer1 "0.2" reducer mapFn codec initialDb
           }
 
 type Codec a = {decode :: Json -> a, encode :: Json -> String}
+type Sbot = ClientConnection
 
 foreign import data FlumeReducer :: Type
 foreign import data FlumeView :: Type
-foreign import data Sbot :: Type
 foreign import mkFlumeReducer :: String -> ReduceFnImpl -> MapFn -> FlumeData -> FlumeReducer
 foreign import mkFlumeReducer1 :: String -> ReduceFnImpl -> MapFn -> Codec FlumeData -> FlumeData -> FlumeReducer
 foreign import flumeUse :: ∀ fx. Sbot -> String -> FlumeReducer -> Eff (ssb :: SSB | fx) FlumeView

@@ -2,18 +2,23 @@ module App.UI.Model where
 
 import Prelude
 
+import App.Common (getClient')
 import App.IgoMsg (AcceptMatchPayload, DeclineMatchPayload, IgoMove, MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload)
+import Control.Monad.Aff (Aff)
 import Data.DateTime (DateTime(..))
 import Data.Generic (class Generic, gEq, gShow)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.StrMap (StrMap)
 import Data.StrMap as M
+import Ssb.Client (ClientConnection)
+import Ssb.Config (SSB)
 import Ssb.Types (UserKey)
 
 type Model =
   { flume :: FlumeState
   , whoami :: Maybe UserKey
+  , feedPath :: Maybe String
   }
 
 type EzModel =
@@ -53,6 +58,7 @@ initialModel :: Model
 initialModel =
   { flume: FlumeUnloaded
   , whoami: Nothing
+  , feedPath: Nothing
   }
 
 

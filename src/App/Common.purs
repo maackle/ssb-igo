@@ -7,6 +7,8 @@ import Control.Monad.Eff.Class (liftEff)
 import Data.Maybe (Maybe(..))
 import Ssb.Client (getClient)
 import Ssb.Config (Config(..), SSB, ConfigData, defaultConfigData)
+import Ssb.Keys (loadOrCreateSync)
+import Ssb.Server (createFeed')
 
 clientConfig :: ∀ fx. Eff ( ssb :: SSB | fx ) Config
 clientConfig = do

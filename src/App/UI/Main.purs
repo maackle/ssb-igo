@@ -56,11 +56,12 @@ app ∷ App.App Effect Sub Model Action
 app =
   { render: View.render
   , update: Action.update
-  , init: App.purely model
+  , init: {model, effects}
   , subs
   }
   where
     model = initialModel
+    effects = App.lift $ GetIdentity initialModel.feedPath UpdateIdentity
 
 
 routeAction ∷ String -> Maybe Action
@@ -88,10 +89,10 @@ main = do
       inst.push i
       inst.run
 
-  runAff_ (const $ pure unit) $ do
-    {id} <- whoami =<< getClient'
-    liftEff $ inst.push (InitState {id})
-    liftEff inst.run
+  -- runAff_ (const $ pure unit) $ do
+  --   {id} <- whoami =<< getClient'
+  --   liftEff $ inst.push (InitState {id})
+  --   liftEff inst.run
 
   where
     effectInterpreter :: ∀ i. Interpreter (Eff FX) Effect i

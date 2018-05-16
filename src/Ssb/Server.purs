@@ -5,12 +5,13 @@ import Prelude
 import App.Utils (trace')
 import Control.Monad.Aff.Compat (fromEffFnAff)
 import Control.Monad.Eff (Eff)
+import Data.Argonaut (Json)
 import Data.Foreign (Foreign, toForeign)
 import Debug.Trace (traceAny)
 import Ssb.Client (ClientConnection)
 import Ssb.Common (SE, SA')
 import Ssb.Config (Config(..), SSB, addTemp)
-import Ssb.Types (UserKey)
+import Ssb.Types (UserKey, SsbKeys)
 
 foreign import data Plugin :: Type
 
@@ -28,11 +29,14 @@ loadPlugins :: ∀ fx. Array Plugin -> SE fx Unit
 loadPlugins plugins = do
   builder <- _sbotBuilder plugins
   pure unit
---
--- startSbot :: ∀ fx. Config -> SE fx ClientConnection
--- startSbot = _startSbot <<< configBuilder
 
-foreign import createFeed :: ∀ fx. ClientConnection -> SE fx ClientConnection
+createFeed = _createFeed
+createFeed' = _createFeed1
+createFeedRemote' sbot keys = _createFeed2 sbot keys $ toForeign {remote: true}
+
+foreign import _createFeed :: ∀ fx. ClientConnection -> SE fx ClientConnection
+foreign import _createFeed1 :: ∀ fx. ClientConnection -> SsbKeys -> SE fx ClientConnection
+foreign import _createFeed2 :: ∀ fx. ClientConnection -> SsbKeys -> Foreign -> SE fx ClientConnection
 foreign import requirePlugin :: ∀ fx. String -> SE fx Plugin
 foreign import _sbotBuilder :: ∀ fx. Array Plugin -> SE fx (∀ fx'. Foreign -> SE fx' ClientConnection)
 foreign import toPlugin :: ∀ a. a -> Plugin

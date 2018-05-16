@@ -12,7 +12,9 @@ exports._startSbot = scuttlebot
 exports.requirePlugin = name => () => require(name)
 exports.toPlugin = a => a
 
-exports.createFeed = exposeEff(0, 'createFeed')
+exports._createFeed = exposeEff(0, 'createFeed')
+exports._createFeed1 = exposeEff(1, 'createFeed')
+exports._createFeed2 = exposeEff(2, 'createFeed')
 exports.use = exposeEff(1, 'use')
 
 exports._whoami = exposeAff(0, 'whoami')

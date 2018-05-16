@@ -10,6 +10,7 @@ import Data.Maybe (Maybe(..))
 import Data.Record (insert)
 import Data.StrMap (StrMap)
 import Data.Symbol (SProxy(..))
+import Ssb.Types (SsbKeys)
 
 data Config
   = Config ConfigData
@@ -21,7 +22,7 @@ type ConfigData =
   , sign :: Maybe String
   , port :: Int
   , host :: String
-  , keys :: Keys
+  , keys :: SsbKeys
   , manifest :: Maybe (StrMap String)
   }
 
@@ -32,12 +33,6 @@ type TestConfigRows =
 
 addTemp :: {|TestConfigRows} -> {temp :: Boolean | TestConfigRows}
 addTemp cfg = insert (SProxy :: SProxy "temp") true cfg
-
-type Keys =
-  { id :: String
-  , public :: String
-  , private :: String
-  }
 
 encodeJsonKeys {id, public, private} =
   "id" := id
@@ -51,7 +46,7 @@ type Caps =
   }
 
 type DefaultConfigOpts =
-  Maybe { path :: String, keys :: Maybe Keys }
+  Maybe { path :: String, keys :: Maybe SsbKeys }
 
 defaultConfigData :: ∀ fx. DefaultConfigOpts -> Eff (ssb :: SSB | fx) ConfigData
 defaultConfigData Nothing = _defaultConfig jsonNull jsonNull

@@ -7,6 +7,7 @@ import App.Streaming (encodeFlumeDb)
 import App.UI.Action (Action(..))
 import App.UI.Model (FlumeState(..), IndexedRequest(..), Model, EzModel, ezify)
 import App.UI.View.Dashboard as View
+import App.UI.View.Dev as Dev
 import Data.Foldable (find)
 import Data.Maybe (Maybe(..))
 import Data.StrMap as M
@@ -27,11 +28,14 @@ render model =
       ]
     Just ez ->
       H.div []
-        [ View.dashboard ez
+        [ Dev.devToolbar
+        , View.dashboard ez
         , H.button [H.onClick $ H.always_ (PlaceStone)] [ H.text "publish public"]
         , H.button
           [ H.onClick $ H.always_ (CreateOffer testIdentity demoOffer ) ]
           [ H.text "publish private" ]
+        , H.pre []
+          [ H.text (unsafeStringify model)]
         ]
   where
     showDb = case model.flume of

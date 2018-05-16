@@ -10,22 +10,23 @@ import App.UI.Model (FlumeState(..), Model)
 import Data.Argonaut (Json, jsonNull)
 import Data.Maybe (Maybe(..), maybe)
 import Debug.Trace (spy, traceAny)
-import Spork.App (lift)
+import Spork.App (lift, purely)
 import Spork.App as App
 import Ssb.Types (UserKey)
 
 data Action
   = Noop
   | UpdateFlume Json
-  | InitState {id :: UserKey}
+  | UpdateIdentity {id :: UserKey}
   | PlaceStone
   | CreateOffer UserKey OfferMatchPayload
+  | SetFeedPath (Maybe String)
 
 update ∷ Model -> Action -> App.Transition Effect Model Action
 update model = case _ of
   Noop ->
     App.purely model
-  InitState {id} ->
+  UpdateIdentity {id} ->
     App.purely $ model { whoami = Just id }
   UpdateFlume json -> traceAny json \_ ->
     App.purely $ case model.flume of
@@ -37,7 +38,11 @@ update model = case _ of
           then model
           else model { flume = FlumeDb $ reduceFn flume mapped }
   PlaceStone ->
-    { model, effects: lift (Publish (Msg.demoMsg) Noop) }
+    { model, effects: lift (Publish model.feedPath (Msg.demoMsg) Noop) }
   CreateOffer opponent payload ->
     let msg = OfferMatch payload
-    in { model, effects: lift (PublishPrivate msg [opponent] Noop)}
+    in { model, effects: lift (Publish model.feedPath msg Noop)}
+  SetFeedPath path ->
+    { model: model { feedPath = path }
+    , effects: lift (GetIdentity model.feedPath UpdateIdentity)
+    }

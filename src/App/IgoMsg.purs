@@ -78,9 +78,8 @@ derive instance genericBoardPosition :: Generic BoardPosition
 
 derive instance eqStoneColor :: Eq StoneColor
 
-publishMsg :: ∀ eff. IgoMsg -> SA eff Unit
-publishMsg msg = do
-  client <- getClient'
+publishMsg :: ∀ eff. ClientConnection -> IgoMsg -> SA eff Unit
+publishMsg client msg = do
   _ <- publish client $ toJson msg
   pure unit
 
@@ -89,11 +88,11 @@ publishMsg' client msg = do
   msg <- publish client $ toJson msg
   pure $ unsafePartial $ fromRight $ parseMessage msg
 
-publishPrivateMsg :: ∀ eff. IgoMsg -> Array UserKey -> SA eff Unit
-publishPrivateMsg msg recips = do
-  client <- getClient'
-  _ <- publishPrivate client (toJson msg) recips
-  pure unit
+-- publishPrivateMsg :: ∀ eff. IgoMsg -> Array UserKey -> SA eff Unit
+-- publishPrivateMsg msg recips = do
+--   client <- getClient'
+--   _ <- publishPrivate client (toJson msg) recips
+--   pure unit
 
 toJson :: IgoMsg -> Json
 toJson msg = case toObject' $ encodeJson msg of

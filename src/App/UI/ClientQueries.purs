@@ -2,6 +2,7 @@ module App.UI.ClientQueries where
 
 import Prelude
 
+import App.Common (getClient')
 import App.Streaming (decodeFlumeDb)
 import App.UI.Model (FlumeData)
 import Control.Monad.Aff (Aff)
@@ -22,5 +23,15 @@ getDb sbot = do
     Just db -> pure db
     Nothing -> pure $ unsafeCrashWith "can't decode raw db"
 
+-- testFeed :: ∀ fx. String -> ClientConnection -> Aff (ssb :: SSB | fx) ClientConnection
+-- testFeed path sbot = fromEffFnAff $ _testFeed sbot path
+
+testFeeds =
+  { alice: "./ssb-data-alice/secret"
+  , bob: "./ssb-data-bob/secret"
+  , charlie: "./ssb-data-charlie/secret"
+  }
+
 foreign import getStream :: ∀ fx. ClientConnection -> Eff (ssb :: SSB | fx) PullStream
 foreign import _getDb :: ∀ fx. ClientConnection -> EffFnAff (ssb :: SSB | fx) Json
+-- foreign import _testFeed :: ∀ fx. ClientConnection -> String -> EffFnAff (ssb :: SSB | fx) ClientConnection
