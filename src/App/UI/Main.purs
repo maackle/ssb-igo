@@ -56,8 +56,8 @@ app ∷ App.App Effect Sub Model Action
 app =
   { render: View.render
   , update: Action.update
-  , subs
   , init: App.purely model
+  , subs
   }
   where
     model = initialModel

@@ -57,16 +57,16 @@ initialModel =
 
 
 -- TODO: make newtype
-data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey}
-data IndexedDecline = IndexedDecline DeclineMatchPayload {author :: UserKey}
+data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey, key :: MsgKey}
+data IndexedDecline = IndexedDecline DeclineMatchPayload {author :: UserKey, key :: MsgKey}
 data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey, key :: MsgKey}
-data IndexedMove = IndexedMove PlayMovePayload {rootAccept :: MsgKey} {author :: UserKey}
+data IndexedMove = IndexedMove PlayMovePayload {rootAccept :: MsgKey} {author :: UserKey, key :: MsgKey}
 newtype IndexedMatch = IndexedMatch
   { acceptPayload :: AcceptMatchPayload
   , offerPayload :: OfferMatchPayload
   , moves :: (Array MoveStep)
-  , acceptMeta :: {author :: UserKey}
-  , offerMeta :: {author :: UserKey}
+  , acceptMeta :: {author :: UserKey, key :: MsgKey}
+  , offerMeta :: {author :: UserKey, key :: MsgKey}
   }
 derive instance newtypeIndexedMatch :: Newtype IndexedMatch _
 

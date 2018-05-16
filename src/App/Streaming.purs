@@ -77,7 +77,7 @@ reduceFn (db) json =
             else db
 
     SsbMessage (OfferMatch payload) {key, author} ->
-      db { offers = insert key (IndexedOffer payload {author}) db.offers }
+      db { offers = insert key (IndexedOffer payload {key, author}) db.offers }
 
     SsbMessage (WithdrawOffer targetKey) {author} ->
       lookup targetKey db.offers
@@ -95,8 +95,8 @@ reduceFn (db) json =
                             { acceptPayload
                             , offerPayload
                             , moves: []
-                            , acceptMeta: {author: acceptMeta.author}
-                            , offerMeta: {author: offerMeta.author}
+                            , acceptMeta: {author: acceptMeta.author, key: acceptMeta.key}
+                            , offerMeta: {author: offerMeta.author, key: offerMeta.key}
                             }
               in db { offers = delete offerKey db.offers
                     , matches = insert key match db.matches
@@ -108,7 +108,7 @@ reduceFn (db) json =
         # maybe db \(IndexedOffer {opponentKey} meta) ->
           if author == opponentKey
             then db { offers = delete offerKey db.offers
-                    , declines = insert key (IndexedDecline payload {author}) db.declines
+                    , declines = insert key (IndexedDecline payload {key, author}) db.declines
                     }
             else db
 
@@ -137,7 +137,7 @@ reduceFn (db) json =
         case moveError of
           Nothing ->
             let
-              newMove = IndexedMove payload {rootAccept} {author}
+              newMove = IndexedMove payload {rootAccept} {key, author}
               moveStep = MoveStep {move, key}
               newMatch = match # unwrap >>> (\m -> m { moves = snoc m.moves moveStep }) >>> wrap
             in db { moves   = M.insert key newMove db.moves

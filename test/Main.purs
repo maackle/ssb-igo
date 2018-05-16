@@ -3,36 +3,25 @@ module Test.Main where
 import Prelude
 
 import App.DB.Main (ssbIgoPlugin)
-import App.IgoMsg (BoardPosition(..), GameTerms, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, RequestMatchPayload, SsbMessage(..), StoneColor(..), publishMsg')
-import App.UI.Model (FlumeData, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
+import App.IgoMsg (BoardPosition(BoardPosition), IgoMove(PlayStone), IgoMsg(AcceptMatch, OfferMatch, WithdrawOffer, AcknowledgeDecline, DeclineMatch, ExpireRequest, RequestMatch, PlayMove), MsgKey, OfferMatchPayload, RequestMatchPayload, SsbMessage(SsbMessage), StoneColor(Black), publishMsg')
 import App.UI.ClientQueries (getDb)
-import App.Utils ((&))
+import App.UI.Model (FlumeData, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
 import Control.Monad.Aff (Aff, attempt)
-import Control.Monad.Aff.Console (log)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Exception (EXCEPTION, throwException)
-import Control.Monad.Trans.Class (lift)
-import Data.Array.NonEmpty (NonEmptyArray, replicate)
-import Data.Bifunctor (lmap)
-import Data.Either (Either(..), either, fromRight)
-import Data.Foreign (toForeign)
-import Data.Int (toNumber)
+import Data.Either (either)
 import Data.Maybe (Maybe(..))
 import Data.StrMap as M
-import Data.Traversable (sequence, traverse)
-import Data.Tuple (Tuple(..))
-import Data.Tuple.Nested ((/\))
-import Debug.Trace (spy, traceA, traceAnyA)
-import Partial (crashWith)
-import Partial.Unsafe (unsafePartial)
+import Data.Traversable (sequence)
+import Debug.Trace (traceA, traceAnyA)
 import Ssb.Client (ClientConnection, close, getClient, props, whoami)
 import Ssb.Common (SA)
 import Ssb.Config (Config(..), SSB, defaultConfigData)
-import Ssb.Server (Plugin, createFeed, loadPlugins, requirePlugin, sbotBuilder, toPlugin)
+import Ssb.Server (createFeed, requirePlugin, sbotBuilder, toPlugin)
 import Ssb.Types (UserKey)
-import Test.Spec (describe, describeOnly, it, itOnly, pending, pending')
+import Test.Spec (describe, it, pending, pending')
 import Test.Spec.Assertions (shouldEqual, shouldNotEqual)
 import Test.Spec.Reporter (consoleReporter)
 import Test.Spec.Runner (RunnerEffects, run)
@@ -170,16 +159,16 @@ main = do
           playbook1 sbot \alice -> do
             (SsbMessage _ {author, key}) <- publishMsg' alice $ RequestMatch requestPayload
             db <- getDb sbot
-            M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author})
+            M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author, key})
         pending "only allows one request per user"
 
       describe "ExpireRequest" do
         it "only cancels requests from original author" $ sesh testbot \sbot -> do
           playbook2 sbot \alice bob -> do
             (SsbMessage _ {author, key}) <- publishMsg' alice $ RequestMatch requestPayload
-            let expected = IndexedRequest requestPayload {author}
+            let expected = IndexedRequest requestPayload {author, key}
             db <- getDb sbot
-            M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author})
+            M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author, key})
 
             (SsbMessage _ meta2) <- publishMsg' bob $ ExpireRequest key
             db <- getDb sbot
@@ -195,7 +184,8 @@ main = do
             let payload = offerPayload bob
             (SsbMessage _ {author, key}) <- publishMsg' alice $ OfferMatch payload
             checkDb sbot \db ->
-              M.lookup key db.offers `shouldEqual` (Just $ IndexedOffer payload {author})
+              M.lookup key db.offers `shouldEqual` (Just $ IndexedOffer payload {author, key})
+        pending "disallows offer to self"
 
       describe "DeclineMatch" do
         it "lets target of OfferMatch decline" $ sesh testbot \sbot -> do
@@ -203,19 +193,19 @@ main = do
             let offerData = offerPayload bob
             (SsbMessage _ {author, key}) <- publishMsg' alice $ OfferMatch offerData
             checkDb sbot \db ->
-              M.lookup key db.offers `shouldEqual` (Just $ IndexedOffer offerData {author})
+              M.lookup key db.offers `shouldEqual` (Just $ IndexedOffer offerData {author, key})
 
             let declinePayload = {offerKey: key, userKey: author, reason: Just "changed my mind"}
             (SsbMessage _ declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
             checkDb sbot \db -> do
               db.offers `shouldEqual` M.empty
-              M.values db.declines `shouldEqual` [IndexedDecline declinePayload {author: declineMeta.author}]
+              M.values db.declines `shouldEqual` [IndexedDecline declinePayload {key: declineMeta.key, author: declineMeta.author}]
 
         it "prevents all others from declining" $ sesh testbot \sbot -> do
           playbook3 sbot \alice bob charlie -> do
             let offerData = offerPayload bob
             (SsbMessage _ {author, key}) <- publishMsg' alice $ OfferMatch offerData
-            let expected = IndexedOffer offerData {author}
+            let expected = IndexedOffer offerData {author, key}
             let declinePayload = {offerKey: key, userKey: author, reason: Just "changed my mind"}
 
             (SsbMessage _ declineMeta) <- publishMsg' alice $ DeclineMatch declinePayload
@@ -231,7 +221,7 @@ main = do
             (SsbMessage _ declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
             checkDb sbot \db -> do
               db.offers `shouldEqual` M.empty
-              M.values db.declines `shouldEqual` [IndexedDecline declinePayload {author: declineMeta.author}]
+              M.values db.declines `shouldEqual` [IndexedDecline declinePayload {key: declineMeta.key, author: declineMeta.author}]
 
       describe "AcknowledgeDecline" do
         it "clears declines from index" $ sesh testbot \sbot -> do
@@ -244,7 +234,7 @@ main = do
                   , reason: Just "changed my mind" }
 
             (SsbMessage _ declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
-            let expected = IndexedDecline declinePayload {author: declineMeta.author}
+            let expected = IndexedDecline declinePayload {key: declineMeta.key, author: declineMeta.author}
             (SsbMessage _ _) <- publishMsg' charlie $ AcknowledgeDecline declineMeta.key
             (SsbMessage _ _) <- publishMsg' bob $ AcknowledgeDecline declineMeta.key
             checkDb sbot \db -> do

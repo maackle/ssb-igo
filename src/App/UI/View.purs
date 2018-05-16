@@ -2,18 +2,16 @@ module App.UI.View where
 
 import Prelude
 
-import App.IgoMsg (IgoMsg(..), demoOfferPayload)
+import App.IgoMsg (demoOfferPayload)
 import App.Streaming (encodeFlumeDb)
 import App.UI.Action (Action(..))
 import App.UI.Model (FlumeState(..), IndexedRequest(..), Model, EzModel, ezify)
+import App.UI.View.Dashboard as View
 import Data.Foldable (find)
 import Data.Maybe (Maybe(..))
-import Data.StrMap (toUnfoldable)
 import Data.StrMap as M
-import Data.Tuple (Tuple(..))
 import Global.Unsafe (unsafeStringify)
 import Spork.Html as H
-import Spork.Html.Elements.Keyed as K
 
 testIdentity = "PhgZSAy4aWPYx231rgypWz8jjNOJmwCi9diVYiYHh50=.ed25519"
 otherIdentity = "70mCOxEUBDup8sP1ec7XjCQqJmN6/XQDVf7wRKyjEvQ=.ed25519"
@@ -29,7 +27,7 @@ render model =
       ]
     Just ez ->
       H.div []
-        [ dashboard ez
+        [ View.dashboard ez
         , H.button [H.onClick $ H.always_ (PlaceStone)] [ H.text "publish public"]
         , H.button
           [ H.onClick $ H.always_ (CreateOffer testIdentity demoOffer ) ]
