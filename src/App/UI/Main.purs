@@ -12,7 +12,7 @@ import App.UI.Model (Model, initialModel)
 import App.UI.Sub (Sub(..), Handler)
 import App.UI.Sub as Sub
 import App.UI.View as View
-import Control.Monad.Aff (Aff, Error, launchAff_, runAff_)
+import Control.Monad.Aff (Aff, Error, Fiber, launchAff, launchAff_, runAff_)
 import Control.Monad.Aff.Class (liftAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -42,15 +42,15 @@ import Spork.App as App
 import Spork.Html as H
 import Spork.Html.Elements.Keyed as K
 import Spork.Interpreter (Interpreter(..), liftNat, merge, never, throughAff)
-import Ssb.Client (getClient, whoami)
+import Ssb.Client (ClientConnection, getClient, whoami)
 import Ssb.Config (SSB)
 import Ssb.PullStream (PullStream, drain)
 
 
 
 subs :: Model -> App.Batch Sub Action
-subs _ =
-  App.lift $ ReceiveSsbMessage UpdateFlume
+subs {devIdentity} =
+  App.lift $ ReceiveSsbMessage devIdentity UpdateFlume
 
 app ∷ App.App Effect Sub Model Action
 app =
@@ -61,7 +61,7 @@ app =
   }
   where
     model = initialModel
-    effects = App.lift $ GetIdentity initialModel.feedPath UpdateIdentity
+    effects = App.lift $ GetIdentity initialModel.devIdentity UpdateIdentity
 
 
 routeAction ∷ String -> Maybe Action
@@ -79,7 +79,7 @@ main = do
 
   inst <-
     App.makeWithSelector
-      (effectInterpreter `merge` Sub.interpreter listenWith)
+      (effectInterpreter `merge` Sub.interpreter)
       (app )
       "#app"
   inst.run
@@ -98,14 +98,3 @@ main = do
     effectInterpreter :: ∀ i. Interpreter (Eff FX) Effect i
     effectInterpreter = (throughAff runEffect handleException)
     -- effectInterpreterEff = liftNat runEffect
-
-
-    -- Receives a handler function which must be contructed
-    -- inside the subscription interpreter, and hooks that up
-    -- to a pull-stream drain() to fire Subs for every stream item
-    listenWith :: Handler FX -> Eff FX Unit
-    listenWith fn = launchAff_ do
-      client <- getClient'
-      stream <- liftEff $ getStream client
-      drain stream fn
-      pure unit

@@ -28,7 +28,7 @@ render model =
       ]
     Just ez ->
       H.div []
-        [ Dev.devToolbar
+        [ Dev.devToolbar ez
         , View.dashboard ez
         , H.button [H.onClick $ H.always_ (PlaceStone)] [ H.text "publish public"]
         , H.button

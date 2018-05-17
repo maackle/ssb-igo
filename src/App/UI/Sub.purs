@@ -2,19 +2,29 @@ module App.UI.Sub where
 
 import Prelude hiding (sub)
 
+import App.Common (getClient')
+import App.UI.ClientQueries (devClient, getStream)
+import App.UI.Model (DevIdentity)
+import Control.Monad.Aff (Fiber, error, killFiber, launchAff, launchAff_)
 import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
 import Data.Argonaut (Json)
+import Data.Maybe (Maybe(..), maybe)
 import Debug.Trace (traceA, traceAnyA)
 import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
 import Spork.EventQueue as EventQueue
 import Spork.Interpreter (Interpreter(..))
+import Ssb.Client (ClientConnection)
+import Ssb.Config (SSB)
+import Ssb.PullStream (drain)
 
-data Sub a = ReceiveSsbMessage (Json -> a)
+data Sub a = ReceiveSsbMessage (Maybe DevIdentity) (Json -> a)
 derive instance functorSub :: Functor Sub
 
 -- type SubEffects eff = (console :: CONSOLE | eff)
 
-type E fx = Eff ( fx)
+type FX fx = (ssb :: SSB | fx)
+type E fx = Eff (ssb :: SSB | fx)
 
 -- NOTE: couldn't use stepper here because can't directly return an `Eff fx Action`
 -- due to needing to defer to the listener to add items to the queue
@@ -22,15 +32,30 @@ type E fx = Eff ( fx)
 -- NOTE: also couldn't use withCont because it executes every sub,
 -- we can't differentiate between first time (for setup) and subsequent times
 
+type SbotFiber eff = Fiber (FX eff) ClientConnection
 type Handler eff = (Json -> E eff Boolean)
+type SubState eff =
+  { devIdentity :: Maybe DevIdentity
+  , sbotFiber :: Maybe (SbotFiber eff)
+  }
 
 interpreter ∷
   ∀ eff o  -- o is Action!!
-  . (Handler eff -> E eff Unit)
-  -> Interpreter (E eff) Sub o
-interpreter listenWith = Interpreter $ EventQueue.withAccum spec
+  . Interpreter (E eff) Sub o
+interpreter = Interpreter $ EventQueue.withAccum spec
   where
-    spec :: EventQueueInstance (E eff) o -> E eff (EventQueueAccum (E eff) Boolean (Sub o))
+
+    -- Receives a handler function which must be constructed
+    -- inside the subscription interpreter, and hooks that up
+    -- to a pull-stream drain() to fire Subs for every stream item
+    listenWith :: Maybe DevIdentity -> Handler eff -> E eff (SbotFiber eff)
+    listenWith ident fn = launchAff do
+      client <- maybe getClient' devClient ident
+      stream <- liftEff $ getStream client
+      drain stream fn
+      pure client
+
+    spec :: EventQueueInstance (E eff) o -> E eff (EventQueueAccum (E eff) (SubState eff) (Sub o))
     spec queue = pure { init, update, commit }
       where
         getHandler :: (Json -> o) -> Handler eff
@@ -40,12 +65,26 @@ interpreter listenWith = Interpreter $ EventQueue.withAccum spec
           queue.run
           pure true
 
-        init = false
+        init :: SubState eff
+        init =
+          { devIdentity: Nothing
+          , sbotFiber: Nothing
+          }
 
-        update started sub =
+        update m sub =
           case sub of
-            ReceiveSsbMessage k -> do
-              when (not started) $ listenWith $ getHandler k
-              pure true
+            ReceiveSsbMessage devIdentity k -> do
+              case m.sbotFiber of
+                Nothing -> do
+                  fiber <- listenWith devIdentity $ getHandler k
+                  pure $ {sbotFiber: Just fiber, devIdentity}
+                Just fiber ->
+                  if devIdentity /= m.devIdentity
+                    then do
+                      launchAff_ $ killFiber (error "cleaning up draining client") fiber
+                      fiber <- listenWith devIdentity $ getHandler k
+                      pure $ {sbotFiber: Just fiber, devIdentity}
+                    else
+                      pure m
 
         commit = pure

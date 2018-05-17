@@ -18,8 +18,14 @@ import Ssb.Types (UserKey)
 type Model =
   { flume :: FlumeState
   , whoami :: Maybe UserKey
-  , feedPath :: Maybe String
+  , devIdentity :: Maybe DevIdentity
   }
+
+data DevIdentity
+  = Alice | Bob | Charlie
+
+derive instance genericDevIdentity :: Generic DevIdentity
+derive instance eqDevIdentity :: Eq DevIdentity
 
 type EzModel =
   { db :: FlumeData
@@ -58,7 +64,7 @@ initialModel :: Model
 initialModel =
   { flume: FlumeUnloaded
   , whoami: Nothing
-  , feedPath: Nothing
+  , devIdentity: Nothing
   }
 
 

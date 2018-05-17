@@ -59,14 +59,11 @@ flumeReducer = mkFlumeReducer1 "0.2" reducer mapFn codec initialDb
         in encodeFlumeDb $ reduceFn encoded msg
 
     decode j = do
-      traceAnyA j
       dbJson <- M.lookup "value" =<< toObject j
-      traceAnyA dbJson
-      traceA "that was it"
       decodeFlumeDb dbJson
     encode j = unsafePartial $ fromJust $ do
       db <- M.lookup "value" =<< toObject j
-      pure $ (traceAny db $ const db) # unsafeStringify
+      pure $ db # unsafeStringify
 
     resolve :: Maybe FlumeData -> FlumeData
     resolve m = maybe' (\_ -> unsafeCrashWith "cannot decode w/ flumeReducer codec") id m

@@ -33,7 +33,7 @@ decodeFlumeDb :: Json -> Maybe FlumeData
 decodeFlumeDb json = do
   o <- toObject json
   offers <- M.lookup "offers" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
-  requests <- M.lookup "requests" o >>= toObject >>= (map (spy >>> decodeJson >>> spy >>> hush) >>> sequence)
+  requests <- M.lookup "requests" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
   declines <- M.lookup "declines" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
   matches <- M.lookup "matches" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
   moves <- M.lookup "moves" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)

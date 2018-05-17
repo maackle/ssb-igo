@@ -7,3 +7,4 @@ dist/
 .psc-ide-port
 ssb-data/
 ssb-test-data/
+ssb-dev-*

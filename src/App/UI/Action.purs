@@ -6,7 +6,7 @@ import App.IgoMsg (IgoMsg(OfferMatch), OfferMatchPayload)
 import App.IgoMsg as Msg
 import App.Streaming (decodeFlumeDb, mapFn, maybeToFlumeState, reduceFn)
 import App.UI.Effect (Effect(..))
-import App.UI.Model (FlumeState(..), Model)
+import App.UI.Model (DevIdentity, FlumeState(..), Model)
 import Data.Argonaut (Json, jsonNull)
 import Data.Maybe (Maybe(..), maybe)
 import Debug.Trace (spy, traceAny)
@@ -20,7 +20,7 @@ data Action
   | UpdateIdentity {id :: UserKey}
   | PlaceStone
   | CreateOffer UserKey OfferMatchPayload
-  | SetFeedPath (Maybe String)
+  | SetDevIdentity (DevIdentity)
 
 update ∷ Model -> Action -> App.Transition Effect Model Action
 update model = case _ of
@@ -38,11 +38,11 @@ update model = case _ of
           then model
           else model { flume = FlumeDb $ reduceFn flume mapped }
   PlaceStone ->
-    { model, effects: lift (Publish model.feedPath (Msg.demoMsg) Noop) }
+    { model, effects: lift (Publish model.devIdentity (Msg.demoMsg) Noop) }
   CreateOffer opponent payload ->
     let msg = OfferMatch payload
-    in { model, effects: lift (Publish model.feedPath msg Noop)}
-  SetFeedPath path ->
-    { model: model { feedPath = path }
-    , effects: lift (GetIdentity model.feedPath UpdateIdentity)
+    in { model, effects: lift (Publish model.devIdentity msg Noop)}
+  SetDevIdentity ident ->
+    { model: model { devIdentity = Just ident }
+    , effects: lift (GetIdentity (Just ident) UpdateIdentity)
     }
