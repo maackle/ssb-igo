@@ -37,58 +37,53 @@ type SbotFiber eff = Fiber (FX eff) ClientConnection
 type Handler eff = (Json -> E eff Boolean)
 type SubState eff =
   { devIdentity :: Maybe DevIdentity
-  , sbotFiber :: Maybe (SbotFiber eff)
+  , sbotFiber :: Maybe (Fiber (FX eff) Unit)
   }
 
 interpreter ∷
   ∀ eff o  -- o is Action!!
   . Interpreter (E eff) Sub o
-interpreter = Interpreter $ EventQueue.withAccum spec
-  where
+interpreter = Interpreter $ EventQueue.withAccum spec where
 
-    -- Receives a handler function which must be constructed
-    -- inside the subscription interpreter, and hooks that up
-    -- to a pull-stream drain() to fire Subs for every stream item
-    listenWith :: Maybe DevIdentity -> Handler eff -> E eff (SbotFiber eff)
-    listenWith ident fn = launchAff do
-      client <- maybe getClient' devClient ident
-      stream <- liftEff $ getStream client
-      drain stream fn
-      pure client
+  -- Receives a handler function which must be constructed
+  -- inside the subscription interpreter, and hooks that up
+  -- to a pull-stream drain() to fire Subs for every stream item
+  listenWith :: Maybe DevIdentity -> Handler eff -> E eff (Fiber (FX eff) Unit)
+  listenWith ident fn = launchAff do
+    client <- maybe getClient' devClient ident
+    stream <- liftEff $ getStream client
+    drain stream fn
 
-    spec :: EventQueueInstance (E eff) o -> E eff (EventQueueAccum (E eff) (SubState eff) (Sub o))
-    spec queue = pure { init, update, commit }
-      where
-        getHandler :: (Json -> o) -> Handler eff
-        getHandler k json = do
-          traceA ("ReceiveSsbMessage: " <> (show json))
-          queue.push (k json)
-          queue.run
-          pure true
+  spec :: EventQueueInstance (E eff) o -> E eff (EventQueueAccum (E eff) (SubState eff) (Sub o))
+  spec queue = pure { init, update, commit } where
+  
+    getHandler :: (Json -> o) -> Handler eff
+    getHandler k json = do
+      traceA ("ReceiveSsbMessage: " <> (show json))
+      queue.push (k json)
+      queue.run
+      pure true
 
-        init :: SubState eff
-        init =
-          { devIdentity: Nothing
-          , sbotFiber: Nothing
-          }
+    init :: SubState eff
+    init =
+      { devIdentity: Nothing
+      , sbotFiber: Nothing
+      }
 
-        update m sub =
-          case sub of
-            ReceiveSsbMessage devIdentity k -> do
-              case m.sbotFiber of
-                Nothing -> do
-                  fiber <- listenWith devIdentity $ getHandler k
-                  pure $ {sbotFiber: Just fiber, devIdentity}
-                Just fiber ->
-                  if devIdentity /= m.devIdentity
-                    then do
-                      launchAff_ $ do
-                        liftEff $ info "Cleaning up fiber: BEFORE"
-                        killFiber (error "cleaning up draining client") fiber
-                        liftEff $ info "Cleaning up fiber: AFTER"
-                      fiber <- listenWith devIdentity $ getHandler k
-                      pure $ {sbotFiber: Just fiber, devIdentity}
-                    else
-                      pure m
+    commit = pure
 
-        commit = pure
+    update m sub =
+      case sub of
+        ReceiveSsbMessage devIdentity k -> do
+          case m.sbotFiber of
+            Nothing -> do
+              fiber <- listenWith devIdentity $ getHandler k
+              pure $ {sbotFiber: Just fiber, devIdentity}
+            Just fiber ->
+              if devIdentity /= m.devIdentity
+                then do
+                  launchAff_ $ killFiber (error "can't clean up the drain") fiber
+                  fiber' <- listenWith devIdentity $ getHandler k
+                  pure $ {sbotFiber: Just fiber', devIdentity}
+                else
+                  pure m

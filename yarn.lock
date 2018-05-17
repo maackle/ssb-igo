@@ -2233,13 +2233,13 @@ pseudomap@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/pseudomap/-/pseudomap-1.0.2.tgz#f052a28da70e618917ef0a8ac34c1ae5a68286b3"
 
+pull-abortable@^4.1.1, pull-abortable@~4.1.0:
+  version "4.1.1"
+  resolved "https://registry.yarnpkg.com/pull-abortable/-/pull-abortable-4.1.1.tgz#b3ad5aefb4116b25916d26db89393ac98d0dcea1"
+
 pull-abortable@~4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/pull-abortable/-/pull-abortable-4.0.0.tgz#7017a984c3b834de77bac38c10b776f22dfc1843"
-
-pull-abortable@~4.1.0:
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/pull-abortable/-/pull-abortable-4.1.1.tgz#b3ad5aefb4116b25916d26db89393ac98d0dcea1"
 
 pull-box-stream@^1.0.13:
   version "1.0.13"

@@ -28,11 +28,12 @@ update model = case _ of
     App.purely model
   UpdateIdentity {id} ->
     App.purely $ model { whoami = Just id }
-  UpdateFlume json -> traceAny json \_ ->
-    App.purely $ case model.flume of
-      FlumeFailure _ -> model
-      FlumeUnloaded -> model { flume = maybeToFlumeState "failed loading state" $ decodeFlumeDb json }
-      FlumeDb flume ->
+  UpdateFlume json ->
+    App.purely $ case model.flume, decodeFlumeDb json of
+      FlumeFailure _, _ -> model
+      _, Just db -> model { flume = FlumeDb db }
+      FlumeUnloaded, Nothing -> model { flume = FlumeFailure "Flume index not intitialized"}
+      FlumeDb flume, Nothing ->
         let mapped = mapFn json
         in if spy $ mapped == jsonNull
           then model
