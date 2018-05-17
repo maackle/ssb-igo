@@ -5,9 +5,10 @@ import Prelude hiding (sub)
 import App.Common (getClient')
 import App.UI.ClientQueries (devClient, getStream)
 import App.UI.Model (DevIdentity)
-import Control.Monad.Aff (Fiber, error, killFiber, launchAff, launchAff_)
+import Control.Monad.Aff (Fiber, error, joinFiber, killFiber, launchAff, launchAff_)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console (CONSOLE, info)
 import Data.Argonaut (Json)
 import Data.Maybe (Maybe(..), maybe)
 import Debug.Trace (traceA, traceAnyA)
@@ -23,8 +24,8 @@ derive instance functorSub :: Functor Sub
 
 -- type SubEffects eff = (console :: CONSOLE | eff)
 
-type FX fx = (ssb :: SSB | fx)
-type E fx = Eff (ssb :: SSB | fx)
+type FX fx = (ssb :: SSB, console :: CONSOLE | fx)
+type E fx = Eff (FX fx)
 
 -- NOTE: couldn't use stepper here because can't directly return an `Eff fx Action`
 -- due to needing to defer to the listener to add items to the queue
@@ -81,7 +82,10 @@ interpreter = Interpreter $ EventQueue.withAccum spec
                 Just fiber ->
                   if devIdentity /= m.devIdentity
                     then do
-                      launchAff_ $ killFiber (error "cleaning up draining client") fiber
+                      launchAff_ $ do
+                        liftEff $ info "Cleaning up fiber: BEFORE"
+                        killFiber (error "cleaning up draining client") fiber
+                        liftEff $ info "Cleaning up fiber: AFTER"
                       fiber <- listenWith devIdentity $ getHandler k
                       pure $ {sbotFiber: Just fiber, devIdentity}
                     else

@@ -27,9 +27,21 @@ exports._getClient = function (config) {
     config.caps = {
       shs: config.shs,
       sign: config.sign };
+
+    var _client = null;
     ssbClient(config.keys, config, function (err, client) {
+      _client = client;
       if (err) error(err);else success(client);
     });
+    return function (cancelError, cancelerError, cancelerSuccess) {
+      console.log('CANCEL', _client);
+      if (_client) {
+        _client.close();
+        cancelerSuccess();
+      } else {
+        cancelError();
+      }
+    };
   };
 };
 
@@ -45,4 +57,3 @@ exports._publish = function (client) {
 
 exports._publishPrivate = exposeAff(2, ['private', 'publish']);
 exports._whoami = exposeAff(0, 'whoami');
-// return (ce, cre, cs) => cs()

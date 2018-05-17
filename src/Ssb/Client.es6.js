@@ -23,15 +23,26 @@ exports._getClient = config => (error, success) => {
     shs: config.shs,
     sign: config.sign,
   }
+
+  let _client = null
   ssbClient(
     config.keys,
     config,
     (err, client) => {
+      _client = client
       if (err) error(err)
       else success(client)
     }
   )
-  // return (ce, cre, cs) => cs()
+  return (cancelError, cancelerError, cancelerSuccess) => {
+    console.log("CANCEL", _client)
+    if (_client) {
+      _client.close()
+      cancelerSuccess()
+    } else {
+      cancelError()
+    }
+  }
 }
 
 exports._publish = client => data =>

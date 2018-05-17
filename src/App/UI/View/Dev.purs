@@ -3,11 +3,11 @@ module App.UI.View.Dev where
 import Prelude
 
 import App.UI.Action (Action(..))
-import App.UI.ClientQueries (devClient)
-import App.UI.Model (DevIdentity(..))
+import App.UI.Model (DevIdentity(..), EzModel)
 import Data.Maybe (Maybe(..))
 import Spork.Html as H
 
+devToolbar :: EzModel -> H.Html Action
 devToolbar ez =
   H.div [H.classes ["dev-toolbar"], H.style "display: flex; width: 100%"]
     [ H.a [H.href "#", H.onClick $ const $ Just $ SetDevIdentity Alice]

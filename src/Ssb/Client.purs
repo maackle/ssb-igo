@@ -2,13 +2,11 @@ module Ssb.Client where
 
 import Prelude
 
-import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Compat (EffFnAff, fromEffFnAff)
-import Control.Monad.Eff (Eff, kind Effect)
+import Control.Monad.Aff.Compat (fromEffFnAff)
 import Data.Argonaut (Json)
 import Data.Foreign (Foreign, toForeign)
 import Ssb.Common (SA, SA', SE)
-import Ssb.Config (Config(..), SSB)
+import Ssb.Config (Config(TestConfig, Config))
 import Ssb.Types (UserKey)
 
 foreign import data ClientConnection :: Type
