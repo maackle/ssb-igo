@@ -19,6 +19,7 @@ type Model =
   { flume :: FlumeState
   , whoami :: Maybe UserKey
   , devIdentity :: Maybe DevIdentity
+  , users :: StrMap User
   }
 
 data DevIdentity
@@ -26,6 +27,10 @@ data DevIdentity
 
 derive instance genericDevIdentity :: Generic DevIdentity
 derive instance eqDevIdentity :: Eq DevIdentity
+
+type User =
+  { key :: UserKey
+  , name :: String }
 
 type EzModel =
   { db :: FlumeData
@@ -65,6 +70,7 @@ initialModel =
   { flume: FlumeUnloaded
   , whoami: Nothing
   , devIdentity: Nothing
+  , users: M.empty
   }
 
 

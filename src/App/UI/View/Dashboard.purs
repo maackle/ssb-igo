@@ -32,13 +32,13 @@ dashboard ez@{db, whoami} =
           [ H.th [] [H.text "From"]
           , H.th [] [H.text "Size"]
           ]
-        , H.tbody [] (map offerRow offers)
+        , H.tbody [] (map offerRow incomingOffers)
         ]
       ]
     ]
   where
-    offers :: Array IndexedOffer
-    offers = M.values db.offers
+    incomingOffers :: Array IndexedOffer
+    incomingOffers = M.values db.offers
       # filter \(IndexedOffer {opponentKey} _) -> opponentKey == whoami
 --
 -- table :: Array String -> Array String -> Array (H.Html Action) -> H.Html Action
