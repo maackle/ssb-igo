@@ -42,7 +42,7 @@ import Spork.App as App
 import Spork.Html as H
 import Spork.Html.Elements.Keyed as K
 import Spork.Interpreter (Interpreter(..), liftNat, merge, never, throughAff)
-import Ssb.Client (ClientConnection, getClient, whoami)
+import Ssb.Client (SbotConn, getClient, whoami)
 import Ssb.Config (SSB)
 import Ssb.PullStream (PullStream, drain)
 

@@ -15,7 +15,7 @@ import Debug.Trace (traceA, traceAnyA)
 import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
 import Spork.EventQueue as EventQueue
 import Spork.Interpreter (Interpreter(..))
-import Ssb.Client (ClientConnection)
+import Ssb.Client (SbotConn)
 import Ssb.Config (SSB)
 import Ssb.PullStream (drain)
 
@@ -33,7 +33,7 @@ type E fx = Eff (FX fx)
 -- NOTE: also couldn't use withCont because it executes every sub,
 -- we can't differentiate between first time (for setup) and subsequent times
 
-type SbotFiber eff = Fiber (FX eff) ClientConnection
+type SbotFiber eff = Fiber (FX eff) SbotConn
 type Handler eff = (Json -> E eff Boolean)
 type SubState eff =
   { devIdentity :: Maybe DevIdentity
@@ -56,7 +56,7 @@ interpreter = Interpreter $ EventQueue.withAccum spec where
 
   spec :: EventQueueInstance (E eff) o -> E eff (EventQueueAccum (E eff) (SubState eff) (Sub o))
   spec queue = pure { init, update, commit } where
-  
+
     getHandler :: (Json -> o) -> Handler eff
     getHandler k json = do
       traceA ("ReceiveSsbMessage: " <> (show json))

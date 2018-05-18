@@ -14,11 +14,11 @@ import DOM (DOM)
 import Data.Argonaut (Json)
 import Data.Maybe (Maybe(..), maybe)
 import Debug.Trace (traceAnyA)
-import Ssb.Client (ClientConnection, whoami)
+import Ssb.Client (SbotConn, whoami)
 import Ssb.Config (SSB)
 import Ssb.Types (UserKey)
 
-type AffSbot fx = (Aff (ssb :: SSB | fx) ClientConnection)
+type AffSbot fx = (Aff (ssb :: SSB | fx) SbotConn)
 
 data Effect a
   = Nofx a

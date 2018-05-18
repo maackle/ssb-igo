@@ -17,7 +17,7 @@ import Data.Unfoldable (fromMaybe)
 import Debug.Trace (traceAnyA)
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
-import Ssb.Client (ClientConnection, close, getClient, publish, publishPrivate)
+import Ssb.Client (SbotConn, close, getClient, publish, publishPrivate)
 import Ssb.Config (SSB, Config)
 import Ssb.Types (MessageKey, UserKey)
 
@@ -78,12 +78,12 @@ derive instance genericBoardPosition :: Generic BoardPosition
 
 derive instance eqStoneColor :: Eq StoneColor
 
-publishMsg :: ∀ eff. ClientConnection -> IgoMsg -> SA eff Unit
+publishMsg :: ∀ eff. SbotConn -> IgoMsg -> SA eff Unit
 publishMsg client msg = do
   _ <- publish client $ toJson msg
   pure unit
 
-publishMsg' :: ∀ eff. ClientConnection -> IgoMsg -> SA eff SsbMessage
+publishMsg' :: ∀ eff. SbotConn -> IgoMsg -> SA eff SsbMessage
 publishMsg' client msg = do
   msg <- publish client $ toJson msg
   pure $ unsafePartial $ fromRight $ parseMessage msg

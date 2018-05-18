@@ -16,7 +16,7 @@ import Data.Maybe (Maybe(..))
 import Data.StrMap as M
 import Data.Traversable (sequence)
 import Debug.Trace (traceA, traceAnyA)
-import Ssb.Client (ClientConnection, close, getClient, props, whoami)
+import Ssb.Client (SbotConn, close, getClient, props, whoami)
 import Ssb.Common (SA)
 import Ssb.Config (Config(..), SSB, defaultConfigData)
 import Ssb.Server (createFeed, requirePlugin, sbotBuilder, toPlugin)
@@ -34,7 +34,7 @@ normalConfig = do
   pure $ Config $ cfg { port = 98765 }
 
 type FX = (RunnerEffects (ssb :: SSB, console :: CONSOLE, exception :: EXCEPTION))
-type Conn = ClientConnection
+type Conn = SbotConn
 
 feed = liftEff <<< createFeed
 
@@ -63,12 +63,12 @@ sesh create runTest = do
   close sbot
   either (liftEff <<< throwException) pure result
 
-checkDb :: ClientConnection -> (FlumeData -> Aff FX Unit) -> Aff FX Unit
+checkDb :: SbotConn -> (FlumeData -> Aff FX Unit) -> Aff FX Unit
 checkDb sbot check = do
   db <- getDb sbot
   check db
 
-pubAndCheckDb :: ClientConnection -> IgoMsg -> (SsbMessage -> FlumeData -> Aff FX Unit) -> Aff FX Unit
+pubAndCheckDb :: SbotConn -> IgoMsg -> (SsbMessage -> FlumeData -> Aff FX Unit) -> Aff FX Unit
 pubAndCheckDb sbot m check = do
   msg <- publishMsg' sbot m
   db <- getDb sbot

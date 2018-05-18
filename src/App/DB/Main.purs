@@ -18,7 +18,7 @@ import Data.StrMap as M
 import Debug.Trace (spy, trace, traceA, traceAny, traceAnyA)
 import Global.Unsafe (unsafeStringify)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
-import Ssb.Client (ClientConnection)
+import Ssb.Client (SbotConn)
 import Ssb.Config (SSB)
 import Ssb.Keys (loadOrCreateSync)
 import Ssb.PullStream (PullStream)
@@ -73,7 +73,7 @@ flumeReducer = mkFlumeReducer1 "0.2" reducer mapFn codec initialDb
           }
 
 type Codec a = {decode :: Json -> a, encode :: Json -> String}
-type Sbot = ClientConnection
+type Sbot = SbotConn
 
 foreign import data FlumeReducer :: Type
 foreign import data FlumeView :: Type

@@ -7,37 +7,40 @@ import Data.Argonaut (Json)
 import Data.Foreign (Foreign, toForeign)
 import Ssb.Common (SA, SA', SE)
 import Ssb.Config (Config(TestConfig, Config))
+import Ssb.Server (Sbot)
 import Ssb.Types (UserKey)
 
-foreign import data ClientConnection :: Type
+-- For now they're about the same, but in reality there are fields on Sbot
+-- not present on a client connection
+type SbotConn = Sbot
 
-foreign import props :: ClientConnection -> {id :: String}
+foreign import props :: SbotConn -> {id :: String}
 
 -- Eff
 
-foreign import unboxPrivate :: ∀ fx. ClientConnection -> Json -> (SE fx Json)
+foreign import unboxPrivate :: ∀ fx. SbotConn -> Json -> (SE fx Json)
 
 -- Aff
 
-close :: ∀ fx. ClientConnection -> SA fx Unit
+close :: ∀ fx. SbotConn -> SA fx Unit
 close = fromEffFnAff <<< _close
 
-getClient :: ∀ fx. Config -> SA fx ClientConnection
+getClient :: ∀ fx. Config -> SA fx SbotConn
 getClient = case _ of
   Config cfg -> fromEffFnAff $ _getClient $ toForeign cfg
   TestConfig cfg -> fromEffFnAff $ _getClient $ toForeign cfg
 
-publish :: ∀ fx. ClientConnection -> Json -> SA fx Json
+publish :: ∀ fx. SbotConn -> Json -> SA fx Json
 publish client msg = fromEffFnAff $ _publish client msg
 
-publishPrivate :: ∀ fx. ClientConnection -> Json -> Array UserKey -> SA fx Json
+publishPrivate :: ∀ fx. SbotConn -> Json -> Array UserKey -> SA fx Json
 publishPrivate client msg recips = fromEffFnAff $ _publishPrivate client msg recips
 
-whoami :: ∀ fx. ClientConnection -> SA fx {id :: UserKey}
+whoami :: ∀ fx. SbotConn -> SA fx {id :: UserKey}
 whoami = fromEffFnAff <<< _whoami
 
-foreign import _close :: ∀ fx. ClientConnection -> SA' fx Unit
-foreign import _getClient :: ∀ fx. Foreign -> SA' fx ClientConnection
-foreign import _publish :: ∀ fx. ClientConnection -> Json -> (SA' fx Json)
-foreign import _publishPrivate :: ∀ fx. ClientConnection -> Json -> Array UserKey -> (SA' fx Json)
-foreign import _whoami :: ∀ fx. ClientConnection -> (SA' fx {id :: UserKey})
+foreign import _close :: ∀ fx. SbotConn -> SA' fx Unit
+foreign import _getClient :: ∀ fx. Foreign -> SA' fx SbotConn
+foreign import _publish :: ∀ fx. SbotConn -> Json -> (SA' fx Json)
+foreign import _publishPrivate :: ∀ fx. SbotConn -> Json -> Array UserKey -> (SA' fx Json)
+foreign import _whoami :: ∀ fx. SbotConn -> (SA' fx {id :: UserKey})

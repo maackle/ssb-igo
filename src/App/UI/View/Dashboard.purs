@@ -2,21 +2,15 @@ module App.UI.View.Dashboard where
 
 import Prelude
 
-import App.IgoMsg (IgoMsg(..), demoOfferPayload)
-import App.Streaming (encodeFlumeDb)
-import App.UI.Action (Action(..))
-import App.UI.Model (EzModel, FlumeState(..), IndexedOffer(..), IndexedRequest(..), Model, ezify)
-import Data.Array (filter, intercalate, singleton, zip)
+import App.UI.Action (Action)
+import App.UI.Model (EzModel, IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest))
+import Data.Array (filter, intercalate, singleton)
 import Data.Array.NonEmpty (replicate)
 import Data.Foldable (find)
 import Data.Maybe (Maybe(..))
-import Data.StrMap (toUnfoldable)
 import Data.StrMap as M
-import Data.Tuple (Tuple(..))
-import Global.Unsafe (unsafeStringify)
 import Spork.Html (classes)
 import Spork.Html as H
-import Spork.Html.Elements.Keyed as K
 
 class' = classes <<< singleton
 
