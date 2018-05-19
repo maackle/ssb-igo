@@ -10,3 +10,7 @@ type SsbKeys =
   , public :: String
   , private :: String
   }
+
+foreign import data Plugin :: Type
+foreign import data Sbot :: Type
+type SbotConn = Sbot

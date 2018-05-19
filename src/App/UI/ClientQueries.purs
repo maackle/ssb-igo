@@ -13,9 +13,10 @@ import Data.Argonaut (Json)
 import Data.Maybe (Maybe(..), maybe')
 import Debug.Trace (traceAnyA)
 import Partial.Unsafe (unsafeCrashWith)
-import Ssb.Client (SbotConn, getClient)
+import Ssb.Client (getClient)
 import Ssb.Config (SSB)
 import Ssb.PullStream (PullStream)
+import Ssb.Types (SbotConn)
 
 getDb :: ∀ fx. SbotConn -> Aff (ssb :: SSB | fx) FlumeData
 getDb sbot = do
@@ -31,7 +32,7 @@ devClient = case _ of
   Charlie -> tc "charlie" 8083
   where
     tc name port =
-      getClient =<< (liftEff $ devConfig ("./ssb-dev-" <> name) port)
+      getClient =<< (liftEff $ devConfig ("./ssb-dev/" <> name) port)
 
 foreign import getStream :: ∀ fx. SbotConn -> Eff (ssb :: SSB | fx) PullStream
 foreign import _getDb :: ∀ fx. SbotConn -> EffFnAff (ssb :: SSB | fx) Json

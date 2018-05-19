@@ -16,25 +16,18 @@ import Data.Maybe (Maybe(..))
 import Data.StrMap as M
 import Data.Traversable (sequence)
 import Debug.Trace (traceA, traceAnyA)
-import Ssb.Client (SbotConn, close, getClient, props, whoami)
+import Ssb.Client (close, getClient, props, whoami)
 import Ssb.Common (SA)
 import Ssb.Config (Config(..), SSB, defaultConfigData)
 import Ssb.Server (createFeed, requirePlugin, sbotBuilder, toPlugin)
-import Ssb.Types (UserKey)
+import Ssb.Types (UserKey, SbotConn)
+import Test.Common (Conn, FX, createTestSbot, normalConfig, sesh, tempConfig)
 import Test.Spec (describe, it, pending, pending')
 import Test.Spec.Assertions (shouldEqual, shouldNotEqual)
 import Test.Spec.Reporter (consoleReporter)
 import Test.Spec.Runner (RunnerEffects, run)
+import Test.TestSsb (serverTests)
 
-tempConfig = TestConfig { port: 7531, host: "0.0.0.0" }
-normalConfig = do
-  cfg <- defaultConfigData $ Just
-            { path: "./ssb-test-data"
-            , keys: Nothing }
-  pure $ Config $ cfg { port = 98765 }
-
-type FX = (RunnerEffects (ssb :: SSB, console :: CONSOLE, exception :: EXCEPTION))
-type Conn = SbotConn
 
 feed = liftEff <<< createFeed
 
@@ -56,13 +49,6 @@ playbook3 sbot play = do
   c <- feed sbot
   play a b c
 
-sesh :: (Aff FX Conn) -> (Conn -> Aff FX Unit) -> Aff FX Unit
-sesh create runTest = do
-  sbot <- create
-  result <- attempt $ runTest sbot
-  close sbot
-  either (liftEff <<< throwException) pure result
-
 checkDb :: SbotConn -> (FlumeData -> Aff FX Unit) -> Aff FX Unit
 checkDb sbot check = do
   db <- getDb sbot
@@ -76,9 +62,7 @@ pubAndCheckDb sbot m check = do
 
 main :: Eff FX Unit
 main = do
-  traceA "loading"
-  plugins <- sequence [requirePlugin "ssb-private", pure $ toPlugin ssbIgoPlugin]
-  startSbot <- sbotBuilder plugins
+  startSbot <- createTestSbot
   let
     testbot = liftEff $ startSbot tempConfig
     fullbot = liftEff $ startSbot =<< normalConfig
@@ -132,6 +116,8 @@ main = do
       pure key
 
   run [consoleReporter] do
+    serverTests startSbot
+
     describe "server" do
       it "can connect" $ sesh testbot \sbot -> do
         {id} <- whoami sbot

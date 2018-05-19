@@ -3,13 +3,9 @@ const R = require('ramda')
 const _ = require('lodash')
 
 const lookup = (sbot, getter) => {
-  if (!sbot) {
-    throw Error("Scuttlebot not initialized!")
-  }
-  if (_.isString(getter)) getter = [getter]
-  if (_.isArray(getter)) {
-    return R.path(getter, sbot)
-  }
+  if (!sbot) throw Error("Scuttlebot not initialized!")
+  if (_.isString(getter)) getter = getter.split('.')
+  if (_.isArray(getter)) return R.path(getter, sbot)
   if (!getter) return sbot
   return getter(sbot)
 }

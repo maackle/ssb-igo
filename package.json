@@ -9,7 +9,7 @@
     "dev": "concurrently --raw --kill-others \"bin/watch-es6.sh\"",
     "electron": "electron ./electron/main.js",
     "sbot": "node bin/start-sbot.js",
-    "sbot:dev": "concurrently --raw --kill-others \"node bin/start-sbot.js\" \"node bin/start-sbot.js ./ssb-dev-alice 8081\" \"node bin/start-sbot.js ./ssb-dev-bob 8082\" \"node bin/start-sbot.js ./ssb-dev-charlie 8083\"",
+    "sbot:init": "node bin/start-sbot.js yes",
     "start": "npm run build && parcel index.html",
     "test": "pulp test"
   },

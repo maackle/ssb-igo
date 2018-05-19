@@ -1,8 +1,8 @@
 const pull = require("pull-stream")
 const Abortable = require("pull-abortable")
-// exports.drain = x => y => console.log("xxx", x, "yyy", y)
-//
-exports._drain =
+
+
+exports._drainWith =
   stream => fn => (error, success) => {
     const op = d => fn(d)()
     const abortable = Abortable()

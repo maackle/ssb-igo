@@ -2,9 +2,8 @@
 
 var pull = require("pull-stream");
 var Abortable = require("pull-abortable");
-// exports.drain = x => y => console.log("xxx", x, "yyy", y)
-//
-exports._drain = function (stream) {
+
+exports._drainWith = function (stream) {
   return function (fn) {
     return function (error, success) {
       var op = function op(d) {

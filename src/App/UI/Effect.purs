@@ -14,9 +14,9 @@ import DOM (DOM)
 import Data.Argonaut (Json)
 import Data.Maybe (Maybe(..), maybe)
 import Debug.Trace (traceAnyA)
-import Ssb.Client (SbotConn, whoami)
+import Ssb.Client (whoami)
 import Ssb.Config (SSB)
-import Ssb.Types (UserKey)
+import Ssb.Types (UserKey, SbotConn)
 
 type AffSbot fx = (Aff (ssb :: SSB | fx) SbotConn)
 

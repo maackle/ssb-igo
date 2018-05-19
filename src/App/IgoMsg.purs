@@ -17,9 +17,9 @@ import Data.Unfoldable (fromMaybe)
 import Debug.Trace (traceAnyA)
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
-import Ssb.Client (SbotConn, close, getClient, publish, publishPrivate)
+import Ssb.Client (close, getClient, publish, publishPrivate)
 import Ssb.Config (SSB, Config)
-import Ssb.Types (MessageKey, UserKey)
+import Ssb.Types (MessageKey, UserKey, SbotConn)
 
 type SE eff a = Eff (ssb :: SSB | eff) a
 type SA eff a = Aff (ssb :: SSB | eff) a

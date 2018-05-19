@@ -6,21 +6,29 @@ import App.Common (getClient')
 import App.UI.ClientQueries (devClient, getStream)
 import App.UI.Model (DevIdentity)
 import Control.Monad.Aff (Fiber, error, joinFiber, killFiber, launchAff, launchAff_)
+import Control.Monad.Aff.Console as Aff
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, info)
+import Control.Monad.Eff.Console as Eff
 import Data.Argonaut (Json)
+import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), maybe)
+import Data.Traversable (traverse)
 import Debug.Trace (traceA, traceAnyA)
 import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
 import Spork.EventQueue as EventQueue
 import Spork.Interpreter (Interpreter(..))
-import Ssb.Client (SbotConn)
 import Ssb.Config (SSB)
-import Ssb.PullStream (drain)
+import Ssb.Friends (createFriendStream)
+import Ssb.PullStream (drainWith)
+import Ssb.Server (messagesByType)
+import Ssb.Types (SbotConn)
 
-data Sub a = ReceiveSsbMessage (Maybe DevIdentity) (Json -> a)
+data Sub a = IdentityFeeds (Maybe DevIdentity) (SubCallbacks a)
 derive instance functorSub :: Functor Sub
+
+type SubCallbacks a = {igoCb :: (Json -> a), friendsCb :: (Json -> a)}
 
 -- type SubEffects eff = (console :: CONSOLE | eff)
 
@@ -33,57 +41,73 @@ type E fx = Eff (FX fx)
 -- NOTE: also couldn't use withCont because it executes every sub,
 -- we can't differentiate between first time (for setup) and subsequent times
 
-type SbotFiber eff = Fiber (FX eff) SbotConn
+type EffFiber eff = E eff (Fiber (FX eff) Unit)
 type Handler eff = (Json -> E eff Boolean)
 type SubState eff =
   { devIdentity :: Maybe DevIdentity
-  , sbotFiber :: Maybe (Fiber (FX eff) Unit)
+  , sbotFibers :: Maybe (FiberArray eff)
   }
+type FiberArray eff = (Array (Fiber (FX eff) Unit))
 
 interpreter ∷
   ∀ eff o  -- o is Action!!
   . Interpreter (E eff) Sub o
 interpreter = Interpreter $ EventQueue.withAccum spec where
 
-  -- Receives a handler function which must be constructed
-  -- inside the subscription interpreter, and hooks that up
-  -- to a pull-stream drain() to fire Subs for every stream item
-  listenWith :: Maybe DevIdentity -> Handler eff -> E eff (Fiber (FX eff) Unit)
-  listenWith ident fn = launchAff do
-    client <- maybe getClient' devClient ident
-    stream <- liftEff $ getStream client
-    drain stream fn
-
   spec :: EventQueueInstance (E eff) o -> E eff (EventQueueAccum (E eff) (SubState eff) (Sub o))
   spec queue = pure { init, update, commit } where
 
-    getHandler :: (Json -> o) -> Handler eff
-    getHandler k json = do
-      traceA ("ReceiveSsbMessage: " <> (show json))
+    flumeDbHandler :: (Json -> o) -> Handler eff
+    flumeDbHandler k json = do
       queue.push (k json)
       queue.run
       pure true
 
+    friendHandler :: (Json -> o) -> Handler eff
+    friendHandler k json = do
+      queue.push (k json)
+      queue.run
+      pure true
+
+    flumeDbListener :: Maybe DevIdentity -> Handler eff -> EffFiber eff
+    flumeDbListener ident fn = launchAff do
+      client <- maybe getClient' devClient ident
+      stream <- liftEff $ getStream client
+      drainWith stream fn
+
+    friendListener :: Maybe DevIdentity -> Handler eff -> EffFiber eff
+    friendListener ident fn = launchAff do
+      client <- maybe getClient' devClient ident
+      stream <- liftEff $ messagesByType client $ toForeign {type: "about"}
+      drainWith stream fn
+
+    setupListeners :: Maybe DevIdentity -> SubCallbacks o -> E eff (FiberArray eff)
+    setupListeners devIdentity {igoCb, friendsCb} = do
+      fiberFlume <- flumeDbListener devIdentity $ flumeDbHandler igoCb
+      fiberFriends <- friendListener devIdentity $ friendHandler friendsCb
+      pure [fiberFlume, fiberFriends]
+
     init :: SubState eff
     init =
       { devIdentity: Nothing
-      , sbotFiber: Nothing
+      , sbotFibers: Nothing
       }
 
     commit = pure
 
+    update :: SubState eff -> Sub o -> E eff (SubState eff)
     update m sub =
       case sub of
-        ReceiveSsbMessage devIdentity k -> do
-          case m.sbotFiber of
+        IdentityFeeds devIdentity callbacks -> do
+          case m.sbotFibers of
             Nothing -> do
-              fiber <- listenWith devIdentity $ getHandler k
-              pure $ {sbotFiber: Just fiber, devIdentity}
-            Just fiber ->
+              fibers :: FiberArray eff <- setupListeners devIdentity callbacks
+              pure {sbotFibers: Just fibers, devIdentity}
+            Just fibers ->
               if devIdentity /= m.devIdentity
                 then do
-                  launchAff_ $ killFiber (error "can't clean up the drain") fiber
-                  fiber' <- listenWith devIdentity $ getHandler k
-                  pure $ {sbotFiber: Just fiber', devIdentity}
+                  launchAff_ $ traverse (killFiber (error "can't clean up the drainWith")) fibers
+                  fibers' :: FiberArray eff <- setupListeners devIdentity callbacks
+                  pure {sbotFibers: Just fibers, devIdentity}
                 else
                   pure m

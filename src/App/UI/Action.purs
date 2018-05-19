@@ -17,6 +17,7 @@ import Ssb.Types (UserKey)
 data Action
   = Noop
   | UpdateFlume Json
+  | UpdateFriends Json
   | UpdateIdentity {id :: UserKey}
   | PlaceStone
   | CreateOffer UserKey OfferMatchPayload
@@ -38,6 +39,8 @@ update model = case _ of
         in if spy $ mapped == jsonNull
           then model
           else model { flume = FlumeDb $ reduceFn flume mapped }
+  UpdateFriends json ->
+    {model, effects: lift $ Log ("FRIENDS  " <> show json) Noop}
   PlaceStone ->
     { model, effects: lift (Publish model.devIdentity (Msg.demoMsg) Noop) }
   CreateOffer opponent payload ->

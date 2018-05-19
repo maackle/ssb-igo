@@ -6,8 +6,8 @@ import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Compat (EffFnAff(..), fromEffFnAff)
 import Control.Monad.Eff (Eff)
 import Data.Argonaut (Json)
- 
-drain stream fn = fromEffFnAff $ _drain stream fn
+
+drainWith stream fn = fromEffFnAff $ _drainWith stream fn
 
 foreign import data PullStream :: Type
-foreign import _drain :: ∀ fx. PullStream -> (Json -> Eff fx Boolean) -> EffFnAff fx Unit
+foreign import _drainWith :: ∀ fx. PullStream -> (Json -> Eff fx Boolean) -> EffFnAff fx Unit

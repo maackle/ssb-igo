@@ -18,11 +18,11 @@ import Data.StrMap as M
 import Debug.Trace (spy, trace, traceA, traceAny, traceAnyA)
 import Global.Unsafe (unsafeStringify)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
-import Ssb.Client (SbotConn)
 import Ssb.Config (SSB)
 import Ssb.Keys (loadOrCreateSync)
 import Ssb.PullStream (PullStream)
-import Ssb.Server (Plugin, createFeed, createFeed', createFeedRemote', toPlugin)
+import Ssb.Server (createFeed, createFeed', createFeedRemote', toPlugin)
+import Ssb.Types (Sbot)
 
 ssbIgoPlugin =
   { init: \sbot -> unsafePerformEff $ init sbot
@@ -73,7 +73,6 @@ flumeReducer = mkFlumeReducer1 "0.2" reducer mapFn codec initialDb
           }
 
 type Codec a = {decode :: Json -> a, encode :: Json -> String}
-type Sbot = SbotConn
 
 foreign import data FlumeReducer :: Type
 foreign import data FlumeView :: Type

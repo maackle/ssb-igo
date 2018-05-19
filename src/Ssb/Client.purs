@@ -7,12 +7,7 @@ import Data.Argonaut (Json)
 import Data.Foreign (Foreign, toForeign)
 import Ssb.Common (SA, SA', SE)
 import Ssb.Config (Config(TestConfig, Config))
-import Ssb.Server (Sbot)
-import Ssb.Types (UserKey)
-
--- For now they're about the same, but in reality there are fields on Sbot
--- not present on a client connection
-type SbotConn = Sbot
+import Ssb.Types (SbotConn, UserKey)
 
 foreign import props :: SbotConn -> {id :: String}
 
