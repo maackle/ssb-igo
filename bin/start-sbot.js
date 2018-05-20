@@ -65,7 +65,7 @@ if (process.argv[2]) {
           type: 'about',
           about: dev1.id,
           name: dev1.name,
-        })
+        }, (err, msg) => {})
         dev1.publish({
           type: 'contact',
           contact: dev2.id,
@@ -77,12 +77,12 @@ if (process.argv[2]) {
 } else {
 
 }
-
-const source = devs[0].messagesByType({type: 'about'})
-pull(
-  source,
-  pull.drain(
-    m => console.log('pulld', m),
-    () => console.log('done with pulling, UNFORTUNATELY')
-  )
-)
+//
+// const source = devs[0].messagesByType({type: 'contact', live: true})
+// pull(
+//   source,
+//   pull.drain(
+//     m => console.log('pulld', m),
+//     () => console.log('done with pulling, UNFORTUNATELY')
+//   )
+// )

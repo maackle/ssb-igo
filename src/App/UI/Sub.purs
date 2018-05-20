@@ -78,7 +78,7 @@ interpreter = Interpreter $ EventQueue.withAccum spec where
     friendListener :: Maybe DevIdentity -> Handler eff -> EffFiber eff
     friendListener ident fn = launchAff do
       client <- maybe getClient' devClient ident
-      stream <- liftEff $ messagesByType client $ toForeign {type: "about"}
+      stream <- liftEff $ messagesByType client $ toForeign {type: "about", live: true}
       drainWith stream fn
 
     setupListeners :: Maybe DevIdentity -> SubCallbacks o -> E eff (FiberArray eff)
