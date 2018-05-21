@@ -26,7 +26,7 @@ function startSbot (path, port) {
   const config = require('ssb-config/inject')('ssb', {
     path: path,
     keys: keyz,
-    host: "0.0.0.0",
+    host: "localhost",
     port: port,
     master: keyz.id,
     caps: {
@@ -56,10 +56,16 @@ if (process.argv[2]) {
     devs.forEach(dev2 => {
       if (dev1.id !== dev2.id) {
         console.log(`${dev1.name} => ${dev2.name}`)
-        dev1.gossip.add({
-          host: '0.0.0.0',
-          port: dev2.port,
-          key: dev2.id,
+        dev1.gossip.enable('local', (err, blah) => {
+          dev1.gossip.add({
+            host: 'localhost',
+            port: dev2.port,
+            key: dev2.id,
+          }, (err, blah) => {
+              console.log('errblah', err, blah)
+              dev1.gossip.peers(peers => console.log("PEERS", peers))
+          })
+
         })
         dev1.publish({
           type: 'about',
