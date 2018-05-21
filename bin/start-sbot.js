@@ -51,8 +51,14 @@ const devs = ['alice', 'bob', 'charlie'].map((name, i) => {
 })
 
 if (process.argv[2]) {
+  let pubs = 0
   console.log("Setting up follow graph")
   devs.forEach(dev1 => {
+    dev1.publish({
+      type: 'about',
+      about: dev1.id,
+      name: dev1.name,
+    }, () => {})
     devs.forEach(dev2 => {
       if (dev1.id !== dev2.id) {
         console.log(`${dev1.name} => ${dev2.name}`)
@@ -61,34 +67,28 @@ if (process.argv[2]) {
             host: 'localhost',
             port: dev2.port,
             key: dev2.id,
-          }, (err, blah) => {
-              console.log('errblah', err, blah)
-              dev1.gossip.peers(peers => console.log("PEERS", peers))
           })
-
         })
-        dev1.publish({
-          type: 'about',
-          about: dev1.id,
-          name: dev1.name,
-        }, (err, msg) => {})
         dev1.publish({
           type: 'contact',
           contact: dev2.id,
           following: true,
-        })
+        }, () => {})//, (err, msg) => {if (++pubs == 6) feed0()})
       }
     })
   })
 } else {
 
 }
-//
-// const source = devs[0].messagesByType({type: 'contact', live: true})
-// pull(
-//   source,
-//   pull.drain(
-//     m => console.log('pulld', m),
-//     () => console.log('done with pulling, UNFORTUNATELY')
-//   )
-// )
+
+const feed0 = () => {
+  console.log('start stremaing')
+  const source = devs[0].messagesByType({type: 'about', live: true})
+  pull(
+    source,
+    pull.drain(
+      m => console.log('pulld', m),
+      () => console.log('done with pulling, UNFORTUNATELY')
+    )
+  )
+}
