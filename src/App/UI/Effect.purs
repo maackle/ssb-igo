@@ -9,8 +9,13 @@ import App.UI.Model (DevIdentity)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Class (liftAff)
 import Control.Monad.Aff.Console (CONSOLE, log)
+import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console as Eff
 import Control.Monad.Trans.Class (lift)
 import DOM (DOM)
+import DOM.Classy.Event (currentTarget)
+import DOM.Classy.Node (nodeValue)
+import DOM.Event.Event (Event)
 import Data.Argonaut (Json)
 import Data.Maybe (Maybe(..), maybe)
 import Debug.Trace (traceAnyA)
@@ -25,9 +30,14 @@ data Effect a
   | Log String a
   | Publish (Maybe DevIdentity) IgoMsg a
   | GetIdentity (Maybe DevIdentity) ({id :: String} -> a)
+  | RawEffect (∀ f. Aff f a)
+  | ReturnEventTarget Event (String -> a)
+
+type Affect eff = Aff (dom ∷ DOM, ssb :: SSB, console :: CONSOLE | eff)
+
   -- | PublishPrivate IgoMsg (Array UserKey) a
 
-derive instance functorEffect ∷ Functor Effect
+-- derive instance functorEffect ∷ Functor Effect
 
 -- clientFromPath = maybe getClient' (\path -> testFeed path =<< getClient')
 
@@ -46,5 +56,11 @@ runEffect = case _ of
     sbot <- maybe getClient' devClient ident
     who <- whoami sbot
     pure $ next who
+  ReturnEventTarget event next -> liftEff do
+    traceAnyA $ currentTarget event
+    val <- nodeValue $ currentTarget event
+    Eff.log val
+    pure $ next val
+  RawEffect e -> e
   -- PublishPrivate msg recips next ->
   --   Msg.publishPrivateMsg msg recips *> pure next

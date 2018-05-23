@@ -3,7 +3,8 @@ module App.UI.View.Dashboard where
 import Prelude
 
 import App.UI.Action (Action)
-import App.UI.Model (EzModel, IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest))
+import App.UI.Model (EzModel, IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), Model)
+import App.UI.View.MakeOffer (offerForm)
 import Data.Array (filter, intercalate, singleton)
 import Data.Array.NonEmpty (replicate)
 import Data.Foldable (find)
@@ -14,8 +15,8 @@ import Spork.Html as H
 
 class' = classes <<< singleton
 
-dashboard :: EzModel -> H.Html Action
-dashboard ez@{db, whoami} =
+dashboard :: Model -> EzModel -> H.Html Action
+dashboard model ez@{db, whoami} =
   H.div []
     [ H.section []
       [ H.h1 [] [H.text "requests"]
@@ -29,6 +30,7 @@ dashboard ez@{db, whoami} =
         , H.tbody [] (map offerRow incomingOffers)
         ]
       ]
+    , offerForm model ez
     ]
   where
     incomingOffers :: Array IndexedOffer

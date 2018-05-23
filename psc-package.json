@@ -3,6 +3,7 @@
   "set": "psc-0.11.7-20180401",
   "source": "https://github.com/purescript/package-sets.git",
   "depends": [
+    "dom-classy",
     "record",
     "spec",
     "debug",
@@ -15,7 +16,6 @@
     "spork",
     "prelude",
     "psci-support",
-    "dom-classy",
     "simple-json"
   ]
 }

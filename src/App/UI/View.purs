@@ -29,7 +29,7 @@ render model =
     Just ez ->
       H.div []
         [ Dev.devToolbar ez
-        , View.dashboard ez
+        , View.dashboard model ez
         , H.button [H.onClick $ H.always_ (PlaceStone)] [ H.text "publish public"]
         , H.button
           [ H.onClick $ H.always_ (CreateOffer testIdentity demoOffer ) ]
@@ -41,15 +41,6 @@ render model =
     showDb = case model.flume of
       FlumeDb d -> show $ encodeFlumeDb d
       d -> unsafeStringify d
-
-dashboard :: EzModel -> H.Html Action
-dashboard ez@{db} =
-  H.div []
-    [ H.section []
-      [ H.h1 [] [H.text "requests"]
-      , myRequest ez
-      ]
-    ]
 
 myRequest {db, whoami} =
   case r of

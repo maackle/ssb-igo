@@ -2,7 +2,8 @@ module App.UI.Model where
 
 import Prelude
 
-import App.IgoMsg (AcceptMatchPayload, DeclineMatchPayload, IgoMove, MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload)
+import App.IgoMsg (AcceptMatchPayload, DeclineMatchPayload, GameTerms, IgoMove, MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, StoneColor(..), defaultTerms)
+import App.IgoMsg as Msg
 import Data.Generic (class Generic, gEq, gShow)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
@@ -14,7 +15,9 @@ type Model =
   { flume :: FlumeState
   , whoami :: Maybe UserKey
   , devIdentity :: Maybe DevIdentity
-  , users :: StrMap User
+  , userKeys :: StrMap User
+  , userNames :: StrMap User
+  , scratchOffer :: ScratchOffer
   }
 
 data DevIdentity
@@ -25,15 +28,23 @@ derive instance eqDevIdentity :: Eq DevIdentity
 
 type User =
   { key :: UserKey
-  , name :: String }
+  , name :: Maybe String
+  }
+
+type ScratchOffer =
+  { terms :: GameTerms
+  , myColor :: StoneColor
+  , opponent :: User
+  }
 
 type EzModel =
   { db :: FlumeData
-  , whoami :: UserKey}
+  , whoami :: UserKey
+  }
 
 ezify :: Model -> Maybe EzModel
-ezify model =
-  case model.flume, model.whoami of
+ezify m =
+  case m.flume, m.whoami of
     FlumeDb db, Just whoami -> Just {db, whoami}
     _, _ -> Nothing
 
@@ -65,9 +76,10 @@ initialModel =
   { flume: FlumeUnloaded
   , whoami: Nothing
   , devIdentity: Nothing
-  , users: M.empty
+  , userKeys: M.empty
+  , userNames: M.empty
+  , scratchOffer: {terms: defaultTerms, myColor: Black, opponent: {key: "", name: Nothing}}
   }
-
 
 -- TODO: make newtype
 data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey, key :: MsgKey}

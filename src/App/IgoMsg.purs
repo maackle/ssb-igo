@@ -124,23 +124,28 @@ parseMessage json = do
   pure $ SsbMessage msg {key, previous, author, timestamp, hash, signature}
 
 
-demoMsg :: IgoMsg
-demoMsg = RequestMatch
-  { terms:
-    { size: 19
-    , handicap: 0
-    , komi: 5.5
-    }
+defaultRequest :: RequestMatchPayload
+defaultRequest =
+  { terms: defaultTerms
   }
+
+defaultOffer :: OfferMatchPayload
+defaultOffer =
+  { terms
+  , myColor: Black
+  , opponentKey: ""
+  }
+  where
+    {terms} = defaultRequest
 
 demoOfferPayload :: UserKey -> OfferMatchPayload
 demoOfferPayload opponentKey =
   { myColor: Black
   , opponentKey
-  , terms: demoTerms
+  , terms: defaultTerms
   }
 
-demoTerms =
+defaultTerms =
   { size: 19
   , handicap: 0
   , komi: 5.5

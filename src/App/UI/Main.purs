@@ -6,12 +6,12 @@ import App.Common (getClient')
 import App.IgoMsg as Msg
 import App.UI.Action (Action(..))
 import App.UI.Action as Action
-import App.UI.Effect (Effect(..), runEffect)
+import App.UI.Effect (Effect(..), Affect, runEffect)
 import App.UI.Model (Model, initialModel)
 import App.UI.Sub (Sub(..), Handler)
 import App.UI.Sub as Sub
 import App.UI.View as View
-import Control.Monad.Aff (Error)
+import Control.Monad.Aff (Aff, Error)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, error) as Eff
 import DOM (DOM)
@@ -34,7 +34,7 @@ import Routing.Hash (hashes)
 import Simple.JSON (readJSON, writeJSON)
 import Spork.App as App
 import Spork.Html as H
-import Spork.Interpreter (Interpreter(..), liftNat, merge, never, throughAff)
+import Spork.Interpreter (Interpreter(..), basicAff, liftNat, merge, never, throughAff)
 import Ssb.Config (SSB)
 
 
@@ -43,7 +43,7 @@ subs :: Model -> App.Batch Sub Action
 subs {devIdentity} =
   App.lift $ IdentityFeeds devIdentity {igoCb: UpdateFlume, friendsCb: UpdateFriends}
 
-app ∷ App.App Effect Sub Model Action
+app ∷ App.App (Aff FX) Sub Model Action
 app =
   { render: View.render
   , update: Action.update
@@ -52,7 +52,7 @@ app =
   }
   where
     model = initialModel
-    effects = App.lift $ GetIdentity initialModel.devIdentity UpdateIdentity
+    effects = App.lift $ runEffect $ GetIdentity initialModel.devIdentity UpdateIdentity
 
 
 routeAction ∷ String -> Maybe Action
@@ -86,6 +86,9 @@ main = do
   --   liftEff inst.run
 
   where
-    effectInterpreter :: ∀ i. Interpreter (Eff FX) Effect i
-    effectInterpreter = (throughAff runEffect handleException)
+
+    effectInterpreter :: ∀ i. Interpreter (Eff FX) (Aff FX) i
+    effectInterpreter = basicAff handleException
+    -- effectInterpreter :: ∀ i. Interpreter (Eff FX) Effect i
+    -- effectInterpreter = (throughAff runEffect handleException)
     -- effectInterpreterEff = liftNat runEffect
