@@ -3,7 +3,7 @@ module Test.Main where
 import Prelude
 
 import App.DB.Main (ssbIgoPlugin)
-import App.IgoMsg (BoardPosition(BoardPosition), IgoMove(PlayStone), IgoMsg(AcceptMatch, OfferMatch, WithdrawOffer, AcknowledgeDecline, DeclineMatch, ExpireRequest, RequestMatch, PlayMove), MsgKey, OfferMatchPayload, RequestMatchPayload, SsbIgoMsg(SsbIgoMsg), StoneColor(Black), publishMsg')
+import App.IgoMsg (BoardPosition(BoardPosition), IgoMove(PlayStone), IgoMsg(AcceptMatch, OfferMatch, WithdrawOffer, AcknowledgeDecline, DeclineMatch, ExpireRequest, RequestMatch, PlayMove), MsgKey, OfferMatchPayload, RequestMatchPayload, StoneColor(Black), SsbIgoMsg, publishMsg')
 import App.UI.ClientQueries (getDb)
 import App.UI.Model (FlumeData, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
 import Control.Monad.Aff (Aff, attempt)
@@ -103,8 +103,8 @@ main = do
         terms = {size: 19, komi: 0.5, handicap}
         opponentKey = props bob # _.id
         offerData = {myColor, opponentKey, terms}
-      (SsbIgoMsg _ offerMeta) <- publishMsg' alice $ OfferMatch offerData
-      (SsbIgoMsg _ acceptMeta) <- publishMsg' bob $ AcceptMatch {offerKey: offerMeta.key, terms}
+      (offerMeta) <- publishMsg' alice $ OfferMatch offerData
+      (acceptMeta) <- publishMsg' bob $ AcceptMatch {offerKey: offerMeta.key, terms}
       pure acceptMeta.key
 
     playMove :: Conn -> MsgKey -> Aff FX MsgKey
@@ -112,7 +112,7 @@ main = do
       let
         move = PlayStone $ BoardPosition 0 0
         payload = {move, lastMove, subjectiveMoveNum: -1}
-      (SsbIgoMsg _ {key}) <- publishMsg' agent $ PlayMove payload
+      ({key}) <- publishMsg' agent $ PlayMove payload
       pure key
 
   run [consoleReporter] do
@@ -143,7 +143,7 @@ main = do
       describe "RequestMatch" do
         it "indexes requests" $ sesh testbot \sbot -> do
           playbook1 sbot \alice -> do
-            (SsbIgoMsg _ {author, key}) <- publishMsg' alice $ RequestMatch requestPayload
+            ({author, key}) <- publishMsg' alice $ RequestMatch requestPayload
             checkDb sbot \db -> do
               M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author, key})
         pending "only allows one request per user"
@@ -151,16 +151,16 @@ main = do
       describe "ExpireRequest" do
         it "only cancels requests from original author" $ sesh testbot \sbot -> do
           playbook2 sbot \alice bob -> do
-            (SsbIgoMsg _ {author, key}) <- publishMsg' alice $ RequestMatch requestPayload
+            ({author, key}) <- publishMsg' alice $ RequestMatch requestPayload
             let expected = IndexedRequest requestPayload {author, key}
             checkDb sbot \db ->
               M.lookup key db.requests `shouldEqual` (Just $ IndexedRequest requestPayload {author, key})
 
-            (SsbIgoMsg _ meta2) <- publishMsg' bob $ ExpireRequest key
+            (meta2) <- publishMsg' bob $ ExpireRequest key
             checkDb sbot \db ->
               M.values db.requests `shouldEqual` [expected]
 
-            (SsbIgoMsg _ meta2) <- publishMsg' alice $ ExpireRequest key
+            (meta2) <- publishMsg' alice $ ExpireRequest key
             checkDb sbot \db ->
               db.requests `shouldEqual` M.empty
 
@@ -168,7 +168,7 @@ main = do
         it "indexes offers" $ sesh testbot \sbot -> do
           playbook2 sbot \alice bob -> do
             let payload = offerPayload bob
-            (SsbIgoMsg _ {author, key}) <- publishMsg' alice $ OfferMatch payload
+            ({author, key}) <- publishMsg' alice $ OfferMatch payload
             checkDb sbot \db ->
               M.lookup key db.offers `shouldEqual` (Just $ IndexedOffer payload {author, key})
         pending "disallows offer to self"
@@ -177,12 +177,12 @@ main = do
         it "lets target of OfferMatch decline" $ sesh testbot \sbot -> do
           playbook2 sbot \alice bob -> do
             let offerData = offerPayload bob
-            (SsbIgoMsg _ {author, key}) <- publishMsg' alice $ OfferMatch offerData
+            ({author, key}) <- publishMsg' alice $ OfferMatch offerData
             checkDb sbot \db ->
               M.lookup key db.offers `shouldEqual` (Just $ IndexedOffer offerData {author, key})
 
             let declinePayload = {offerKey: key, userKey: author, reason: Just "changed my mind"}
-            (SsbIgoMsg _ declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
+            (declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
             checkDb sbot \db -> do
               db.offers `shouldEqual` M.empty
               M.values db.declines `shouldEqual` [IndexedDecline declinePayload {key: declineMeta.key, author: declineMeta.author}]
@@ -190,21 +190,21 @@ main = do
         it "prevents all others from declining" $ sesh testbot \sbot -> do
           playbook3 sbot \alice bob charlie -> do
             let offerData = offerPayload bob
-            (SsbIgoMsg _ {author, key}) <- publishMsg' alice $ OfferMatch offerData
+            ({author, key}) <- publishMsg' alice $ OfferMatch offerData
             let expected = IndexedOffer offerData {author, key}
             let declinePayload = {offerKey: key, userKey: author, reason: Just "changed my mind"}
 
-            (SsbIgoMsg _ declineMeta) <- publishMsg' alice $ DeclineMatch declinePayload
+            (declineMeta) <- publishMsg' alice $ DeclineMatch declinePayload
             checkDb sbot \db -> do
               M.values db.offers `shouldEqual` [expected]
               db.declines `shouldEqual` M.empty
 
-            (SsbIgoMsg _ declineMeta) <- publishMsg' charlie $ DeclineMatch declinePayload
+            (declineMeta) <- publishMsg' charlie $ DeclineMatch declinePayload
             checkDb sbot \db -> do
               M.values db.offers `shouldEqual` [expected]
               db.declines `shouldEqual` M.empty
 
-            (SsbIgoMsg _ declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
+            (declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
             checkDb sbot \db -> do
               db.offers `shouldEqual` M.empty
               M.values db.declines `shouldEqual` [IndexedDecline declinePayload {key: declineMeta.key, author: declineMeta.author}]
@@ -213,19 +213,19 @@ main = do
         it "clears declines from index" $ sesh testbot \sbot -> do
           playbook3 sbot \alice bob charlie -> do
             let offerData = offerPayload bob
-            (SsbIgoMsg _ offerMeta) <- publishMsg' alice $ OfferMatch offerData
+            (offerMeta) <- publishMsg' alice $ OfferMatch offerData
             let declinePayload =
                   { offerKey: offerMeta.key
                   , userKey: offerMeta.author
                   , reason: Just "changed my mind" }
 
-            (SsbIgoMsg _ declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
+            (declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
             let expected = IndexedDecline declinePayload {key: declineMeta.key, author: declineMeta.author}
-            (SsbIgoMsg _ _) <- publishMsg' charlie $ AcknowledgeDecline declineMeta.key
-            (SsbIgoMsg _ _) <- publishMsg' bob $ AcknowledgeDecline declineMeta.key
+            (_) <- publishMsg' charlie $ AcknowledgeDecline declineMeta.key
+            (_) <- publishMsg' bob $ AcknowledgeDecline declineMeta.key
             checkDb sbot \db -> do
               M.values db.declines `shouldEqual` [expected]
-            (SsbIgoMsg _ _) <- publishMsg' alice $ AcknowledgeDecline declineMeta.key
+            (_) <- publishMsg' alice $ AcknowledgeDecline declineMeta.key
             checkDb sbot \db -> do
               db.declines `shouldEqual` M.empty
 
@@ -233,17 +233,17 @@ main = do
         it "lets an offer maker withdraw their own offer" $ sesh testbot \sbot -> do
           playbook2 sbot \alice bob -> do
             let offerData = offerPayload bob
-            (SsbIgoMsg _ {key}) <- publishMsg' alice $ OfferMatch offerData
-            (SsbIgoMsg _ _) <- publishMsg' bob $ WithdrawOffer key
+            ({key}) <- publishMsg' alice $ OfferMatch offerData
+            (_) <- publishMsg' bob $ WithdrawOffer key
             checkDb sbot \db -> M.size db.offers `shouldEqual` 1
-            (SsbIgoMsg _ _) <- publishMsg' alice $ WithdrawOffer key
+            (_) <- publishMsg' alice $ WithdrawOffer key
             checkDb sbot \db -> M.size db.offers `shouldEqual` 0
 
       describe "AcceptMatch" do
         it "lets only intended opponent accept" $ sesh testbot \sbot -> do
           playbook3 sbot \alice bob charlie -> do
             let offerData@{terms} = offerPayload bob
-            (SsbIgoMsg _ {key}) <- publishMsg' alice $ OfferMatch offerData
+            ({key}) <- publishMsg' alice $ OfferMatch offerData
             _ <- publishMsg' charlie $ AcceptMatch {offerKey: key, terms}
             _ <- publishMsg' alice $ AcceptMatch {offerKey: key, terms}
             checkDb sbot \db -> M.size db.matches `shouldEqual` 0
@@ -293,5 +293,5 @@ main = do
               checkDb sbot \db -> M.size db.moves `shouldEqual` 1
 
             -- let offerData@{terms} = offerPayload bob
-            -- (SsbIgoMsg _ {key}) <- publishMsg' alice $ OfferMatch offerData
+            -- ({key}) <- publishMsg' alice $ OfferMatch offerData
             -- _ <- publishMsg' bob $ AcceptMatch {offerKey: key, terms}

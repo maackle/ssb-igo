@@ -10,6 +10,7 @@ import App.UI.Model (DevIdentity, FlumeState(..), Model, ScratchOffer)
 import App.UI.Optics (ModelLens)
 import App.UI.Optics as O
 import Control.Monad.Aff (Aff)
+import Control.Monad.Aff.Console as Aff
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console as Eff
@@ -19,7 +20,7 @@ import DOM.Event.KeyboardEvent as KeyboardEvent
 import DOM.Event.Types (Event, KeyboardEvent)
 import DOM.HTML.HTMLInputElement as HTMLInputElement
 import DOM.HTML.Types (HTMLInputElement)
-import Data.Argonaut (Json, jsonNull)
+import Data.Argonaut (Json, decodeJson, jsonNull)
 import Data.Either (Either(..), either)
 import Data.Lens (Lens', set, (.~))
 import Data.Lens as Lens
@@ -33,6 +34,7 @@ import Halogen.VDom.DOM.Prop (ElemRef(..))
 import Spork.App (lift, purely)
 import Spork.App as App
 import Spork.Html (ElementRef)
+import Ssb.MessageTypes (AboutMessage(..))
 import Ssb.Types (UserKey)
 import Text.Parsing.Parser.Token (letter)
 
@@ -73,7 +75,19 @@ update model = case _ of
           then model
           else model { flume = FlumeDb $ reduceFn flume mapped }
   UpdateFriends json ->
-    {model, effects: lift $ runEffect $ Log ("FRIENDS  " <> show json) Noop}
+    case decodeJson json :: Either String AboutMessage of
+      Left reason -> {model, effects: lift $ Aff.log reason *> Aff.log (show json) *> pure Noop}
+      Right (AboutMessage {content}) ->
+        let
+          name = case content.name of
+            "" -> Nothing
+            a -> Just a
+          key = content.about
+          user = { name, key }
+        in purely $ model
+            { userKeys = M.insert key user model.userKeys
+            , userNames = maybe model.userNames (\n -> M.insert n user model.userNames) name
+            }
   -- UpdateScratch event f ->
   --   let val = target node
   --   in purely $ model { scratchOffer = f model.scratchOffer }

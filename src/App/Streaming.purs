@@ -3,7 +3,7 @@ module App.Streaming where
 import Prelude
 
 import App.Common (messageTypeString)
-import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseMessage)
+import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseIgoMessage)
 import App.UI.Model (FlumeData, FlumeState(..), IndexedDecline(..), IndexedMatch(..), IndexedMove(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
 import App.Utils (trace', (&))
 import Data.Argonaut (Json, fromObject, jsonNull, toObject, toString)
@@ -66,27 +66,27 @@ reduceFn :: ReduceFn
 reduceFn (db) json =
   reduceRight $ case _ of
 
-    SsbIgoMsg (RequestMatch payload) {key, author} ->
+    Tuple (RequestMatch payload) {key, author} ->
       db { requests = insert key (IndexedRequest payload {key, author}) db.requests }
 
-    SsbIgoMsg (ExpireRequest targetKey) {author} ->
+    Tuple (ExpireRequest targetKey) {author} ->
       lookup targetKey db.requests
         # maybe db \(IndexedRequest _ meta) ->
           if author == meta.author
             then db { requests = delete targetKey db.requests }
             else db
 
-    SsbIgoMsg (OfferMatch payload) {key, author} ->
+    Tuple (OfferMatch payload) {key, author} ->
       db { offers = insert key (IndexedOffer payload {key, author}) db.offers }
 
-    SsbIgoMsg (WithdrawOffer targetKey) {author} ->
+    Tuple (WithdrawOffer targetKey) {author} ->
       lookup targetKey db.offers
         # maybe db \(IndexedOffer _ meta) ->
           if author == meta.author
             then db { offers = delete targetKey db.offers }
             else db
 
-    SsbIgoMsg (AcceptMatch acceptPayload@{offerKey}) acceptMeta@{key} ->
+    Tuple (AcceptMatch acceptPayload@{offerKey}) acceptMeta@{key} ->
       lookup offerKey db.offers
         # maybe db \(IndexedOffer offerPayload@{opponentKey} offerMeta) ->
           if acceptMeta.author == opponentKey
@@ -103,7 +103,7 @@ reduceFn (db) json =
                     }
             else db
 
-    SsbIgoMsg (DeclineMatch payload@{offerKey}) {key, author} ->
+    Tuple (DeclineMatch payload@{offerKey}) {key, author} ->
       lookup offerKey db.offers
         # maybe db \(IndexedOffer {opponentKey} meta) ->
           if author == opponentKey
@@ -112,14 +112,14 @@ reduceFn (db) json =
                     }
             else db
 
-    SsbIgoMsg (AcknowledgeDecline targetKey) {author} ->
+    Tuple (AcknowledgeDecline targetKey) {author} ->
       lookup targetKey db.declines
         # maybe db \(IndexedDecline {userKey} meta) ->
           if author == userKey
             then db { declines = delete targetKey db.declines }
             else db
 
-    SsbIgoMsg (PlayMove payload@{move, lastMove}) {author, key} ->
+    Tuple (PlayMove payload@{move, lastMove}) {author, key} ->
       let
         -- there was a last move?
         maybePrev = M.lookup lastMove db.moves
@@ -145,13 +145,13 @@ reduceFn (db) json =
           Just err ->
             trace ("move validation error: " <> err) $ const db
 
-    SsbIgoMsg (Kibitz payload) _ ->
+    Tuple (Kibitz payload) _ ->
       trace' "TODO" db
 
   where
 
-    msg = parseMessage json # lmap \err -> trace ("bad message: " <> err <> ". json = " <> show json)
-    reduceRight f = either (const db) f msg
+    msg = parseIgoMessage json # lmap \err -> trace ("bad message: " <> err <> ". json = " <> show json)
+    reduceRight f = either (const db) (f <<< \m -> Tuple m.content m) msg
 
     nextMover :: IndexedMatch -> PlayMovePayload -> UserKey
     nextMover (IndexedMatch {offerPayload, offerMeta, moves}) movePayload@{lastMove} =

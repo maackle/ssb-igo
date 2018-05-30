@@ -57,7 +57,7 @@ playersForm model@{scratchOffer} {whoami} =
       White -> Black
 
     updateOpponent :: String -> (Model -> Model)
-    updateOpponent name = opponentLens %~ (rmap (_ { name = Just name }))
+    updateOpponent name = opponentLens .~ Left name
 
     displayUser :: User -> String
     displayUser user = case user.name of
