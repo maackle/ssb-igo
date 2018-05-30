@@ -5,12 +5,13 @@ import Prelude
 import App.IgoMsg (AcceptMatchPayload, DeclineMatchPayload, GameTerms, IgoMove, MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, StoneColor(..), defaultTerms)
 import App.IgoMsg as Msg
 import DOM.Node.Types (Element)
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Generic (class Generic, gEq, gShow)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype)
 import Data.StrMap (StrMap)
 import Data.StrMap as M
+import Debug.Trace (spy)
 import Ssb.Types (UserKey)
 
 type Model =
@@ -47,6 +48,11 @@ type EzModel =
   , myName :: String
   }
 
+scratchOfferToOfferPayload :: ScratchOffer -> Maybe OfferMatchPayload
+scratchOfferToOfferPayload {terms, myColor, opponent} = case opponent of
+  Left _ -> Nothing
+  Right {key} -> Just {terms, myColor, opponentKey: key}
+
 ezify :: Model -> Maybe EzModel
 ezify m =
   case m.flume, m.whoami of
@@ -61,6 +67,12 @@ ezify m =
           , myName
           }
     _, _ -> Nothing
+
+userNameFromKey :: Model -> UserKey -> String
+userNameFromKey {userKeys} key =
+  case M.lookup key userKeys of
+    Just {key, name} -> maybe key id name
+    Nothing -> key
 
 data FlumeState
   = FlumeDb FlumeData
@@ -89,7 +101,7 @@ initialModel :: Model
 initialModel =
   { flume: FlumeUnloaded
   , whoami: Nothing
-  , devIdentity: Nothing
+  , devIdentity: Just Alice
   , userKeys: M.empty
   , userNames: M.empty
   , scratchOffer:

@@ -45,7 +45,7 @@ data Action
   | UpdateIdentity {id :: UserKey}
   -- | UpdateScratch Event (String -> ScratchOffer)
   | PlaceStone
-  | CreateOffer UserKey OfferMatchPayload
+  | CreateOffer OfferMatchPayload
   | SetDevIdentity (DevIdentity)
 
   | ManageRef String ElementRef
@@ -93,7 +93,7 @@ update model = case _ of
   --   in purely $ model { scratchOffer = f model.scratchOffer }
   PlaceStone ->
     { model, effects: lift $ runEffect (Publish model.devIdentity (RequestMatch Msg.defaultRequest) Noop) }
-  CreateOffer opponent payload ->
+  CreateOffer payload ->
     let msg = OfferMatch payload
     in { model, effects: lift $ runEffect (Publish model.devIdentity msg Noop)}
   SetDevIdentity ident ->

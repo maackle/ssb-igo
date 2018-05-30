@@ -4,7 +4,7 @@ import Prelude
 
 import App.IgoMsg (StoneColor(..))
 import App.UI.Action (Action(..))
-import App.UI.Model (Model, User, EzModel)
+import App.UI.Model (EzModel, Model, User, scratchOfferToOfferPayload)
 import App.UI.Optics (ModelLens, opponent, scratchOffer)
 import App.UI.Optics as O
 import App.Utils (maybeToEither)
@@ -15,7 +15,7 @@ import Data.Bifunctor (rmap)
 import Data.Either (Either(..))
 import Data.Int (fromString)
 import Data.Lens (over, set, (%~), (.~), (^.))
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.Number as Number
 import Data.StrMap as M
 import Data.String (Pattern(..))
@@ -135,5 +135,9 @@ offerForm model ez =
     [ H.form []
       [ H.lazy2 playersForm model ez
       , H.lazy  gameTermsForm model
+      , H.button [H.onClick submit, H.disabled (not $ isJust payload)] [H.text "Make offer"]
       ]
     ]
+  where
+    payload = scratchOfferToOfferPayload model.scratchOffer
+    submit = const $ CreateOffer <$> payload
