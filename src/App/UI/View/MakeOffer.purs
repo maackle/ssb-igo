@@ -21,13 +21,13 @@ import Data.StrMap as M
 import Data.String (Pattern(..))
 import Data.String as String
 import Debug.Trace (traceA, traceAny)
-import Spork.Html (classes)
+import Spork.Html (classes, onClick)
 import Spork.Html as H
 
 div_ k = H.div [classes [k]]
 
 playersForm :: Model -> EzModel -> H.Html Action
-playersForm model@{scratchOffer} {whoami} =
+playersForm model@{scratchOffer} {whoami, myName} =
   div_ "players-form"
     [ H.button [classes ["switcher"], H.onClick switchEvent] [H.text "switch"]
     , div_ "players"
@@ -56,8 +56,11 @@ playersForm model@{scratchOffer} {whoami} =
       Black -> White
       White -> Black
 
-    updateOpponent :: String -> (Model -> Model)
-    updateOpponent name = opponentLens .~ Left name
+    updateOpponentSearch :: String -> (Model -> Model)
+    updateOpponentSearch name = opponentLens .~ Left name
+
+    updateOpponentSelect :: User -> (Model -> Model)
+    updateOpponentSelect user = opponentLens .~ Right user
 
     displayUser :: User -> String
     displayUser user = case user.name of
@@ -66,18 +69,24 @@ playersForm model@{scratchOffer} {whoami} =
 
     containsPrefix = String.contains $ Pattern $ opponentName
     names = M.values $ M.filterKeys containsPrefix model.userNames
-    handler = \v -> Just $ UpdateModel $ updateOpponent v
+    handleSearch = \v -> Just $ UpdateModel $ updateOpponentSearch v
+    handleSelect = \user -> H.always_ $ UpdateModel $ updateOpponentSelect user
     refh = Just <<< ManageRef oppRef
-    suggestions = names
-    displaySuggestion user = H.li [] [H.text $ displayUser user]
-      where name = maybe
+    suggestions = case opponent of
+      Right _ -> []
+      Left "" -> []
+      Left _ -> names
+    displaySuggestion user = H.li []
+      [ H.a [H.onClick $ handleSelect user, H.href "#"]
+        [ H.text $ displayUser user ]
+      ]
     opponentField =
       H.div []
-        [ H.input [H.value opponentName, H.onValueInput handler, H.ref refh]
+        [ H.input [H.value opponentName, H.onValueInput handleSearch, H.ref refh]
         , H.ul [] $ map displaySuggestion suggestions
         ]
     switchEvent = H.always $ const $ UpdateModel swapColor
-    meField = H.text "mijkl"
+    meField = H.text myName
     {white, black} = case myColor of
       White -> {white: meField, black: opponentField}
       Black -> {black: meField, white: opponentField}

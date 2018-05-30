@@ -7,7 +7,7 @@ import App.IgoMsg as Msg
 import DOM.Node.Types (Element)
 import Data.Either (Either(..))
 import Data.Generic (class Generic, gEq, gShow)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype)
 import Data.StrMap (StrMap)
 import Data.StrMap as M
@@ -44,12 +44,22 @@ type ScratchOffer =
 type EzModel =
   { db :: FlumeData
   , whoami :: UserKey
+  , myName :: String
   }
 
 ezify :: Model -> Maybe EzModel
 ezify m =
   case m.flume, m.whoami of
-    FlumeDb db, Just whoami -> Just {db, whoami}
+    FlumeDb db, Just whoami ->
+      let
+        myName = maybe whoami id do
+          user <- M.lookup whoami m.userKeys
+          user.name
+      in Just
+          { db
+          , whoami
+          , myName
+          }
     _, _ -> Nothing
 
 data FlumeState
