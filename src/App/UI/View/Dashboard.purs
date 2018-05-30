@@ -30,7 +30,7 @@ dashboard model ez@{db, whoami} =
         , H.tbody [] (map offerRow incomingOffers)
         ]
       ]
-    , offerForm model ez
+    , H.lazy2 offerForm model ez
     ]
   where
     incomingOffers :: Array IndexedOffer

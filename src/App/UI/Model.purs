@@ -4,6 +4,8 @@ import Prelude
 
 import App.IgoMsg (AcceptMatchPayload, DeclineMatchPayload, GameTerms, IgoMove, MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, StoneColor(..), defaultTerms)
 import App.IgoMsg as Msg
+import DOM.Node.Types (Element)
+import Data.Either (Either(..))
 import Data.Generic (class Generic, gEq, gShow)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
@@ -18,6 +20,7 @@ type Model =
   , userKeys :: StrMap User
   , userNames :: StrMap User
   , scratchOffer :: ScratchOffer
+  , refs :: StrMap Element
   }
 
 data DevIdentity
@@ -34,7 +37,8 @@ type User =
 type ScratchOffer =
   { terms :: GameTerms
   , myColor :: StoneColor
-  , opponent :: User
+  , opponent :: Either String User
+  , errorMsg :: Maybe String
   }
 
 type EzModel =
@@ -78,7 +82,13 @@ initialModel =
   , devIdentity: Nothing
   , userKeys: M.empty
   , userNames: M.empty
-  , scratchOffer: {terms: defaultTerms, myColor: Black, opponent: {key: "", name: Nothing}}
+  , scratchOffer:
+    { terms: defaultTerms
+    , myColor: Black
+    , opponent: Left ""
+    , errorMsg: Nothing
+    }
+  , refs: M.empty
   }
 
 -- TODO: make newtype

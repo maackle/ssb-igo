@@ -10,6 +10,8 @@ import Data.Symbol (SProxy(..))
 -- scratchOffer = prop (SProxy :: SProxy "scratchOffer")
 type ModelLens a = Lens' Model a
 
+named name = prop (SProxy :: SProxy "size")
+
 scratchOffer =
   lens _.scratchOffer $ _ { scratchOffer = _ }
 terms =
@@ -18,7 +20,9 @@ myColor =
   lens _.myColor $ _ { myColor = _ }
 opponent =
   lens _.opponent $ _ { opponent = _ }
-name =
-  lens _.name $ _ { name = _ }
-key =
-  lens _.key $ _ { key = _ }
+name = prop (SProxy :: SProxy "name")
+key = prop (SProxy :: SProxy "key")
+size = prop (SProxy :: SProxy "size")
+komi = prop (SProxy :: SProxy "komi")
+handicap = prop (SProxy :: SProxy "handicap")
+errorMsg = prop (SProxy :: SProxy "errorMsg")

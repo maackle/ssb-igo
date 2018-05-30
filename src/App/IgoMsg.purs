@@ -19,7 +19,7 @@ import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
 import Ssb.Client (close, getClient, publish, publishPrivate)
 import Ssb.Config (SSB, Config)
-import Ssb.Types (MessageKey, UserKey, SbotConn)
+import Ssb.Types (MessageKey, SbotConn, SsbMessagePayload, UserKey, SsbMessagePayload)
 
 type SE eff a = Eff (ssb :: SSB | eff) a
 type SA eff a = Aff (ssb :: SSB | eff) a
@@ -51,15 +51,8 @@ type KibitzPayload =
 
 data IgoMove = PlayStone BoardPosition | Pass | Resign
 
-data SsbMessage
-  = SsbMessage IgoMsg
-    { key :: String
-    , previous :: Maybe String
-    , author :: String
-    , timestamp :: Number  -- inner timestamp
-    , hash :: String
-    , signature :: String
-    }
+data SsbIgoMsg = SsbIgoMsg IgoMsg SsbMessagePayload
+
 
 type GameTerms =
   { size :: Int
@@ -83,7 +76,7 @@ publishMsg client msg = do
   _ <- publish client $ toJson msg
   pure unit
 
-publishMsg' :: ∀ eff. SbotConn -> IgoMsg -> SA eff SsbMessage
+publishMsg' :: ∀ eff. SbotConn -> IgoMsg -> SA eff SsbIgoMsg
 publishMsg' client msg = do
   msg <- publish client $ toJson msg
   pure $ unsafePartial $ fromRight $ parseMessage msg
@@ -107,7 +100,7 @@ stripType json = do
     then Right $ fromObject $ M.delete "type" o
     else Left "not an ssb-igo message"
 
-parseMessage :: Json -> Either String SsbMessage
+parseMessage :: Json -> Either String SsbIgoMsg
 parseMessage json = do
   o <- toObject' json
   key <- lookup' "key" toString o
@@ -121,7 +114,7 @@ parseMessage json = do
   content <- lookup_ "content" value
 
   msg <- decodeJson =<< stripType content
-  pure $ SsbMessage msg {key, previous, author, timestamp, hash, signature}
+  pure $ SsbIgoMsg msg {key, previous, author, timestamp, hash, signature}
 
 
 defaultRequest :: RequestMatchPayload

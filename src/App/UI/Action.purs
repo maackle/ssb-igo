@@ -8,6 +8,7 @@ import App.Streaming (decodeFlumeDb, mapFn, maybeToFlumeState, reduceFn)
 import App.UI.Effect (Effect(..), Affect, runEffect)
 import App.UI.Model (DevIdentity, FlumeState(..), Model, ScratchOffer)
 import App.UI.Optics (ModelLens)
+import App.UI.Optics as O
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -19,12 +20,19 @@ import DOM.Event.Types (Event, KeyboardEvent)
 import DOM.HTML.HTMLInputElement as HTMLInputElement
 import DOM.HTML.Types (HTMLInputElement)
 import Data.Argonaut (Json, jsonNull)
-import Data.Lens ((.~))
+import Data.Either (Either(..), either)
+import Data.Lens (Lens', set, (.~))
+import Data.Lens as Lens
 import Data.Maybe (Maybe(..), maybe)
+import Data.StrMap as M
+import Data.String (Pattern(..))
+import Data.String as String
 import Data.Traversable (sequence)
-import Debug.Trace (spy, traceAny, traceAnyA)
+import Debug.Trace (spy, traceA, traceAny, traceAnyA)
+import Halogen.VDom.DOM.Prop (ElemRef(..))
 import Spork.App (lift, purely)
 import Spork.App as App
+import Spork.Html (ElementRef)
 import Ssb.Types (UserKey)
 import Text.Parsing.Parser.Token (letter)
 
@@ -34,12 +42,15 @@ data Action
   | UpdateFriends Json
   | UpdateIdentity {id :: UserKey}
   -- | UpdateScratch Event (String -> ScratchOffer)
-  | UpdateModel (Model -> Model) Boolean Event
   | PlaceStone
   | CreateOffer UserKey OfferMatchPayload
   | SetDevIdentity (DevIdentity)
 
-  | UpdateField (String -> Model -> Model) KeyboardEvent
+  | ManageRef String ElementRef
+  | UpdateModel (Model -> Model)
+  | UpdateField' (String -> Either String (Model -> Model)) String
+
+  | HandlePlayerAutocomplete (ModelLens String) String
 
 data EventDispatcher
   = CurrentTargetDispatch
@@ -76,17 +87,23 @@ update model = case _ of
     , effects: lift $ runEffect (GetIdentity (Just ident) UpdateIdentity)
     }
 
-  UpdateModel f prevent event ->
+  ManageRef key ref -> case ref of
+    Created el -> purely $ model { refs = M.insert key el model.refs}
+    Removed el -> purely $ model { refs = M.delete key model.refs}
+
+  UpdateModel f ->
     { model: f model
-    , effects: lift $ liftEff $ (if prevent then preventDefault event else pure unit) *> pure Noop
+    , effects: lift $ (traceAnyA (f model) *> pure Noop)
     }
-  UpdateField f event ->
+
+  UpdateField' f val ->
     let
       effect = liftEff do
-        let
-          node :: Maybe HTMLInputElement
-          node = fromNode $ target event
-        val :: Maybe String <- sequence $ HTMLInputElement.value <$> node
-        traceAnyA val
-        pure $ UpdateModel (maybe id f val) false (toEvent event)
+        case (f val) of
+          -- Left err -> preventDefault event *> traceA err *> pure Noop
+          Left err -> traceA err *> (pure $ UpdateModel (set (O.scratchOffer <<< O.errorMsg) $ Just err))
+          Right f -> traceA "OK" *> pure $ UpdateModel f
     in { model, effects: lift effect}
+
+  HandlePlayerAutocomplete lens val ->
+    purely model
