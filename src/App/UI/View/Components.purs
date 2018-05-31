@@ -2,8 +2,9 @@ module App.UI.View.Components where
 
 import Prelude
 
-import App.UI.Action (Action)
+import App.UI.Action (Action(..))
 import App.UI.Model (Model)
+import App.UI.Routes (Route)
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as M
 import Data.String as String
@@ -20,3 +21,8 @@ userKeyMarkup {userKeys} userKey = case M.lookup userKey userKeys of
       [H.text $ maybe (truncatedKey key) ((<>) "@") name]
   Nothing ->
     H.text $ truncatedKey userKey
+
+link route el props content =
+  el props' content
+  where
+    props' = props <> [H.onClick $ H.always_ $ SetRoute route]

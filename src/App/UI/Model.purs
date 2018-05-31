@@ -2,13 +2,15 @@ module App.UI.Model where
 
 import Prelude
 
-import App.IgoMsg (AcceptMatchPayload, DeclineMatchPayload, GameTerms, IgoMove, MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, StoneColor(..), defaultTerms)
+import App.IgoMsg (AcceptMatchPayload, DeclineMatchPayload, GameTerms, IgoMove, MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, StoneColor(..), DeclineMatchFields, defaultTerms)
 import App.IgoMsg as Msg
+import App.UI.Routes (Route(..))
 import DOM.Node.Types (Element)
 import Data.Either (Either(..), either)
 import Data.Generic (class Generic, gEq, gShow)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype)
+import Data.Record as Record
 import Data.StrMap (StrMap)
 import Data.StrMap as M
 import Debug.Trace (spy)
@@ -22,6 +24,7 @@ type Model =
   , userNames :: StrMap User
   , scratchOffer :: ScratchOffer
   , refs :: StrMap Element
+  , route :: Route
   }
 
 data DevIdentity
@@ -74,6 +77,15 @@ userNameFromKey {userKeys} key =
     Just {key, name} -> maybe key id name
     Nothing -> key
 
+assignColors :: IndexedOffer -> {black :: UserKey, white :: UserKey}
+assignColors (IndexedOffer payload meta) = assignColors' payload meta
+
+assignColors' :: ∀ a. OfferMatchPayload -> { author :: UserKey | a} -> {black :: UserKey, white :: UserKey}
+assignColors' {myColor, opponentKey} {author} =
+  case myColor of
+    Black -> { black: author, white: opponentKey}
+    White -> { white: author, black: opponentKey}
+
 data FlumeState
   = FlumeDb FlumeData
   | FlumeUnloaded
@@ -111,11 +123,12 @@ initialModel =
     , errorMsg: Nothing
     }
   , refs: M.empty
+  , route: Dashboard
   }
 
 -- TODO: make newtype
 data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey, key :: MsgKey}
-data IndexedDecline = IndexedDecline DeclineMatchPayload {author :: UserKey, key :: MsgKey}
+data IndexedDecline = IndexedDecline {userKey :: UserKey | DeclineMatchFields} {author :: UserKey, key :: MsgKey}
 data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey, key :: MsgKey}
 data IndexedMove = IndexedMove PlayMovePayload {rootAccept :: MsgKey} {author :: UserKey, key :: MsgKey}
 newtype IndexedMatch = IndexedMatch

@@ -5,10 +5,12 @@ import Prelude
 import App.IgoMsg (IgoMsg(..), OfferMatchPayload)
 import App.IgoMsg as Msg
 import App.Streaming (decodeFlumeDb, mapFn, maybeToFlumeState, reduceFn)
-import App.UI.Effect (Effect(..), Affect, runEffect)
+import App.UI.Effect (Affect, runEffect)
+import App.UI.Effect as E
 import App.UI.Model (DevIdentity, FlumeState(..), Model, ScratchOffer)
 import App.UI.Optics (ModelLens)
 import App.UI.Optics as O
+import App.UI.Routes (Route)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console as Aff
 import Control.Monad.Eff (Eff)
@@ -40,12 +42,14 @@ import Text.Parsing.Parser.Token (letter)
 
 data Action
   = Noop
+  | SetRoute Route
   | UpdateFlume Json
   | UpdateFriends Json
   | UpdateIdentity {id :: UserKey}
   -- | UpdateScratch Event (String -> ScratchOffer)
   | PlaceStone
   | CreateOffer OfferMatchPayload
+  | Publish IgoMsg
   | SetDevIdentity (DevIdentity)
 
   | ManageRef String ElementRef
@@ -62,6 +66,8 @@ update ∷ ∀ eff. Model -> Action -> App.Transition (Affect eff) Model Action
 update model = case _ of
   Noop ->
     App.purely model
+  SetRoute route ->
+    App.purely model {route = route}
   UpdateIdentity {id} ->
     App.purely $ model { whoami = Just id }
   UpdateFlume json ->
@@ -92,13 +98,18 @@ update model = case _ of
   --   let val = target node
   --   in purely $ model { scratchOffer = f model.scratchOffer }
   PlaceStone ->
-    { model, effects: lift $ runEffect (Publish model.devIdentity (RequestMatch Msg.defaultRequest) Noop) }
+    { model, effects: lift $ runEffect (publish $ RequestMatch Msg.defaultRequest) }
+  Publish msg ->
+    { model, effects: lift $ runEffect (publish msg) }
   CreateOffer payload ->
     let msg = OfferMatch payload
-    in { model, effects: lift $ runEffect (Publish model.devIdentity msg Noop)}
+    in { model, effects: lift $ runEffect (publish msg)}
+  -- DeclineOffer payload ->
+  --   let msg = DeclineMatch payload
+  --   in { model, effects: lift $ runEffect (publish msg)}
   SetDevIdentity ident ->
     { model: model { devIdentity = Just ident }
-    , effects: lift $ runEffect (GetIdentity (Just ident) UpdateIdentity)
+    , effects: lift $ runEffect (E.GetIdentity (Just ident) UpdateIdentity)
     }
 
   ManageRef key ref -> case ref of
@@ -121,3 +132,6 @@ update model = case _ of
 
   HandlePlayerAutocomplete lens val ->
     purely model
+
+  where
+    publish msg = E.Publish model.devIdentity msg Noop

@@ -2,21 +2,19 @@ module App.UI.View where
 
 import Prelude
 
-import App.IgoMsg (demoOfferPayload)
 import App.Streaming (encodeFlumeDb)
-import App.UI.Action (Action(..))
-import App.UI.Model (FlumeState(..), IndexedRequest(..), Model, EzModel, ezify)
+import App.UI.Action (Action)
+import App.UI.Model (FlumeState(FlumeDb), IndexedRequest(IndexedRequest), Model, EzModel, ezify)
+import App.UI.Routes (Route(..))
 import App.UI.View.Dashboard as View
 import App.UI.View.Dev as Dev
+import App.UI.View.Game as View
 import Data.Foldable (find)
 import Data.Maybe (Maybe(..))
 import Data.StrMap as M
 import Global.Unsafe (unsafeStringify)
 import Spork.Html as H
 
-testIdentity = "PhgZSAy4aWPYx231rgypWz8jjNOJmwCi9diVYiYHh50=.ed25519"
-otherIdentity = "70mCOxEUBDup8sP1ec7XjCQqJmN6/XQDVf7wRKyjEvQ=.ed25519"
-demoOffer = demoOfferPayload otherIdentity
 
 render :: Model -> H.Html Action
 render model =
@@ -29,11 +27,7 @@ render model =
     Just ez ->
       H.div []
         [ Dev.devToolbar ez
-        , H.lazy2 View.dashboard model ez
-        , H.button [H.onClick $ H.always_ (PlaceStone)] [ H.text "publish public"]
-        , H.button
-          [ H.onClick $ H.always_ (CreateOffer testIdentity demoOffer ) ]
-          [ H.text "publish private" ]
+        , mainContent model ez
         , H.pre []
           [ H.text (unsafeStringify model)]
         ]
@@ -42,6 +36,16 @@ render model =
       FlumeDb d -> show $ encodeFlumeDb d
       d -> unsafeStringify d
 
+mainContent :: Model -> EzModel -> H.Html Action
+mainContent model ez@{db} = case model.route of
+  Dashboard -> View.dashboard model ez
+  ViewGame key ->
+    let match = M.lookup key db.matches
+    in View.viewGame model ez match
+  NotFound path ->
+    H.h1 [] [H.text $ "Not found: " <> path]
+
+myRequest :: EzModel -> H.Html _
 myRequest {db, whoami} =
   case r of
     Just request@(IndexedRequest {terms} {key}) ->
@@ -53,5 +57,6 @@ myRequest {db, whoami} =
       author == whoami
 
 
+requestLine :: IndexedRequest -> H.Html _
 requestLine (IndexedRequest {terms} _) =
   H.li [] [H.text $ show terms.size]

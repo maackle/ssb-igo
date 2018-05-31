@@ -4,7 +4,7 @@ import Prelude
 
 import App.Common (messageTypeString)
 import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseIgoMessage)
-import App.UI.Model (FlumeData, FlumeState(..), IndexedDecline(..), IndexedMatch(..), IndexedMove(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
+import App.UI.Model (FlumeData, FlumeState(..), IndexedDecline(..), IndexedMatch(..), IndexedMove(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..), assignColors')
 import App.Utils (trace', (&))
 import Data.Argonaut (Json, fromObject, jsonNull, toObject, toString)
 import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
@@ -16,8 +16,10 @@ import Data.Function.Uncurried (Fn2)
 import Data.Generic (class Generic, gEq, gShow)
 import Data.Maybe (Maybe(..), fromJust, maybe)
 import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Record as Record
 import Data.StrMap (StrMap, delete, fromFoldable, insert, lookup)
 import Data.StrMap as M
+import Data.Symbol (SProxy(..))
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
@@ -107,8 +109,10 @@ reduceFn (db) json =
       lookup offerKey db.offers
         # maybe db \(IndexedOffer {opponentKey} meta) ->
           if author == opponentKey
-            then db { offers = delete offerKey db.offers
-                    , declines = insert key (IndexedDecline payload {key, author}) db.declines
+            then
+              let payload' = Record.insert (SProxy :: SProxy "userKey") meta.author payload
+              in db { offers = delete offerKey db.offers
+                    , declines = insert key (IndexedDecline payload' {key, author}) db.declines
                     }
             else db
 
@@ -183,13 +187,7 @@ reduceFn (db) json =
 
     getPlayers :: IndexedMatch -> {black :: UserKey, white :: UserKey}
     getPlayers (IndexedMatch {offerPayload, offerMeta}) =
-      case myColor of
-        Black -> { black: author, white: opponentKey}
-        White -> { white: author, black: opponentKey}
-      where
-        {author} = offerMeta
-        {terms, myColor, opponentKey} = offerPayload
-        {handicap} = terms
+      assignColors' offerPayload offerMeta
 
 mapFn :: MapFn
 mapFn json = if isValidMessage json then json else trace' ("dropped message: " <> show json) jsonNull

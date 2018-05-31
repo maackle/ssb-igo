@@ -2,23 +2,20 @@ module App.IgoMsg where
 
 import Prelude
 
-import App.Common (getClient', messageTypeString)
-import App.Utils (lookup', lookup_, maybeToEither, toObject')
+import App.Common (messageTypeString)
+import App.Utils (maybeToEither, toObject')
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
-import Data.Argonaut (JObject, Json, fromObject, fromString, toNumber, toObject, toString)
+import Data.Argonaut (JObject, Json, fromObject, fromString, toString)
 import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
 import Data.Either (Either(..), fromRight)
 import Data.Generic (class Generic)
-import Data.Int (fromNumber)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.StrMap as M
-import Data.Unfoldable (fromMaybe)
-import Debug.Trace (traceAnyA)
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
-import Ssb.Client (close, getClient, publish, publishPrivate)
-import Ssb.Config (SSB, Config)
+import Ssb.Client (publish)
+import Ssb.Config (SSB)
 import Ssb.MessageTypes (SsbMessage, parsePayload)
 import Ssb.Types (MessageKey, SbotConn, UserKey)
 
@@ -43,8 +40,9 @@ type RequestMatchPayload =
   {terms :: GameTerms}
 type AcceptMatchPayload =
   {offerKey :: MsgKey, terms :: GameTerms}
-type DeclineMatchPayload =
-  {offerKey :: MsgKey, userKey :: UserKey, reason :: Maybe String}
+type DeclineMatchFields =
+  (offerKey :: MsgKey, reason :: Maybe String)
+type DeclineMatchPayload = {|DeclineMatchFields}
 type PlayMovePayload =
   { move :: IgoMove, lastMove :: MsgKey, subjectiveMoveNum :: Int }
 type KibitzPayload =
@@ -129,6 +127,7 @@ demoOfferPayload opponentKey =
   , terms: defaultTerms
   }
 
+defaultTerms :: GameTerms
 defaultTerms =
   { size: 19
   , handicap: 0

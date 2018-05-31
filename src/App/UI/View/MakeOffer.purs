@@ -5,25 +5,20 @@ import Prelude
 import App.IgoMsg (StoneColor(..))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, Model, User, scratchOfferToOfferPayload)
-import App.UI.Optics (ModelLens, opponent, scratchOffer)
+import App.UI.Optics (ModelLens)
 import App.UI.Optics as O
-import App.Utils (maybeToEither)
-import DOM.Classy.Event (toEvent)
-import Data.Argonaut (toNumber)
-import Data.Argonaut as Json
-import Data.Bifunctor (rmap)
 import Data.Either (Either(..))
 import Data.Int (fromString)
-import Data.Lens (over, set, (%~), (.~), (^.))
+import Data.Lens (set, (%~), (.~))
 import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.Number as Number
 import Data.StrMap as M
 import Data.String (Pattern(..))
 import Data.String as String
-import Debug.Trace (traceA, traceAny)
-import Spork.Html (classes, onClick)
+import Spork.Html (classes)
 import Spork.Html as H
 
+div_ :: ∀ a. String -> Array (H.Html a) -> H.Html a
 div_ k = H.div [classes [k]]
 
 playersForm :: Model -> EzModel -> H.Html Action

@@ -8,6 +8,7 @@ import App.UI.Action (Action(..))
 import App.UI.Action as Action
 import App.UI.Effect (Effect(..), Affect, runEffect)
 import App.UI.Model (Model, initialModel)
+import App.UI.Routes (routes)
 import App.UI.Sub (Sub(..), Handler)
 import App.UI.Sub as Sub
 import App.UI.View as View
@@ -30,7 +31,7 @@ import Data.Foldable as F
 import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
 import Data.Tuple (Tuple(..))
-import Routing.Hash (hashes)
+import Routing.Hash (hashes, matches)
 import Simple.JSON (readJSON, writeJSON)
 import Spork.App as App
 import Spork.Html as H
@@ -54,12 +55,6 @@ app =
     model = initialModel
     effects = App.lift $ runEffect $ GetIdentity initialModel.devIdentity UpdateIdentity
 
-
-routeAction ∷ String -> Maybe Action
-routeAction = case _ of
-  "/"         -> Nothing
-  _           -> Nothing
-
 type FX = App.AppEffects (ssb :: SSB, console :: Eff.CONSOLE)
 
 handleException :: ∀ f. Error -> Eff (console :: Eff.CONSOLE | f) Unit
@@ -75,10 +70,9 @@ main = do
       "#app"
   inst.run
 
-  void $ hashes \oldHash newHash ->
-    F.for_ (routeAction newHash) \i -> do
-      inst.push i
-      inst.run
+  void $ matches routes \oldRoute route -> do
+    inst.push $ SetRoute route
+    inst.run
 
   -- runAff_ (const $ pure unit) $ do
   --   {id} <- whoami =<< getClient'
