@@ -61,7 +61,7 @@ type GameTerms =
 
 data StoneColor = White | Black
 
-data BoardPosition = BoardPosition Int Int
+newtype BoardPosition = BoardPosition {x :: Int, y :: Int}
 
 derive instance genericIgoMsg :: Generic IgoMsg
 derive instance genericIgoMove :: Generic IgoMove

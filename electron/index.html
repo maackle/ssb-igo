@@ -3,11 +3,12 @@
   <head>
     <meta charset="UTF-8">
     <title>Hello World!</title>
+    <link rel="stylesheet" href="node_modules/tenuki/build/tenuki.css" />
   </head>
   <body>
+    <div class="tenuki-board"></div>
     <div id="app"></div>
     <script>
-      require('../output/App.UI.Main').main()
       require('./renderer.js')
     </script>
   </body>

@@ -8,8 +8,8 @@ import App.UI.Action (Action(..))
 import App.UI.Action as Action
 import App.UI.Effect (Effect(..), Affect, runEffect)
 import App.UI.Model (Model, initialModel)
-import App.UI.Routes (routes)
-import App.UI.Sub (Sub(..), Handler)
+import App.UI.Routes (Route(..), routes)
+import App.UI.Sub (Handler, Sub(..))
 import App.UI.Sub as Sub
 import App.UI.View as View
 import Control.Monad.Aff (Aff, Error)
@@ -25,11 +25,14 @@ import DOM.HTML.Window (localStorage) as DOM
 import DOM.Node.Types (Element) as DOM
 import DOM.WebStorage.Storage (getItem, setItem) as DOM
 import Data.Argonaut (Json, jsonNull)
+import Data.Array (singleton)
 import Data.Array as Array
 import Data.Const (Const)
+import Data.Foldable (for_)
 import Data.Foldable as F
 import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
+import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
 import Routing.Hash (hashes, matches)
 import Simple.JSON (readJSON, writeJSON)
@@ -41,8 +44,13 @@ import Ssb.Config (SSB)
 
 
 subs :: Model -> App.Batch Sub Action
-subs {devIdentity} =
-  App.lift $ IdentityFeeds devIdentity {igoCb: UpdateFlume, friendsCb: UpdateFriends}
+subs {devIdentity, route} =
+  App.batch $ identityFeeds <> games
+  where
+    identityFeeds = singleton $ IdentityFeeds devIdentity {igoCb: UpdateFlume, friendsCb: UpdateFriends}
+    games = case route of
+      ViewGame key -> singleton $ GameListeners key
+      _ -> []
 
 app ∷ App.App (Aff FX) Sub Model Action
 app =

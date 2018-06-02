@@ -15,6 +15,7 @@ import Data.StrMap (StrMap)
 import Data.StrMap as M
 import Debug.Trace (spy)
 import Ssb.Types (UserKey)
+import Tenuki.Game (TenukiGame)
 
 type Model =
   { flume :: FlumeState
@@ -25,6 +26,7 @@ type Model =
   , scratchOffer :: ScratchOffer
   , refs :: StrMap Element
   , route :: Route
+  , tenukiGame :: Maybe TenukiGame
   }
 
 data DevIdentity
@@ -124,6 +126,7 @@ initialModel =
     }
   , refs: M.empty
   , route: Dashboard
+  , tenukiGame: Nothing
   }
 
 -- TODO: make newtype

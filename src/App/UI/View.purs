@@ -21,14 +21,14 @@ render model =
   case ezify model of
     Nothing -> H.div []
       [ H.h1 [] [H.text "app loading..."]
-      , H.pre []
+      , H.code []
         [ H.text (unsafeStringify model)]
       ]
     Just ez ->
       H.div []
         [ Dev.devToolbar ez
         , mainContent model ez
-        , H.pre []
+        , H.code []
           [ H.text (unsafeStringify model)]
         ]
   where

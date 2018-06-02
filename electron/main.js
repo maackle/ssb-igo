@@ -13,8 +13,6 @@ require('electron-reload')(path.join(__dirname, 'ui'))
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 
-let sbot
-
 function createWindow () {
   // Create the browser window.
   mainWindow = new BrowserWindow({width: 800, height: 600})
@@ -48,8 +46,6 @@ app.on('ready', () => {createWindow()})
 app.on('window-all-closed', function () {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
-  console.info("closing sbot instance")
-  sbot.close()
   if (process.platform !== 'darwin') {
     app.quit()
   }

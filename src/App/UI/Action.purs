@@ -38,6 +38,8 @@ import Spork.App as App
 import Spork.Html (ElementRef)
 import Ssb.MessageTypes (AboutMessage(..))
 import Ssb.Types (UserKey)
+import Tenuki.Game (TenukiGame)
+import Tenuki.Game as Tenuki
 import Text.Parsing.Parser.Token (letter)
 
 data Action
@@ -53,6 +55,8 @@ data Action
   | SetDevIdentity (DevIdentity)
 
   | ManageRef String ElementRef
+  | ManageTenukiGame ElementRef
+  | SetTenukiGame (Maybe TenukiGame)
   | UpdateModel (Model -> Model)
   | UpdateField' (String -> Either String (Model -> Model)) String
 
@@ -112,6 +116,10 @@ update model = case _ of
     , effects: lift $ runEffect (E.GetIdentity (Just ident) UpdateIdentity)
     }
 
+  ManageTenukiGame ref -> case ref of
+    Created el -> {model, effects: lift $ liftEff $ SetTenukiGame <$> Just <$> Tenuki.createGame el}
+    Removed el -> {model, effects: lift $ pure $ SetTenukiGame Nothing }
+  SetTenukiGame game -> purely $ model { tenukiGame = game }
   ManageRef key ref -> case ref of
     Created el -> purely $ model { refs = M.insert key el model.refs}
     Removed el -> purely $ model { refs = M.delete key model.refs}

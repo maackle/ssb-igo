@@ -5,7 +5,8 @@ import Prelude
 import App.IgoMsg (IgoMsg(..), StoneColor(..))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), Model, assignColors')
-import App.UI.View.Components (userKeyMarkup)
+import App.UI.Routes (Route(..))
+import App.UI.View.Components (link, userKeyMarkup)
 import App.UI.View.MakeOffer (offerForm)
 import Data.Array (filter, intercalate, length, singleton)
 import Data.Array.NonEmpty (replicate)
@@ -22,5 +23,9 @@ viewGame model ez@{db, whoami} maybeMatch = case maybeMatch of
   Just match ->
     H.div []
       [ H.text "A GAME"
+      , link Dashboard H.a [] [H.text "back"]
+      , gameDiv
       ]
   Nothing -> H.text "NO GAME FOUND"
+  where
+    gameDiv = H.div [H.classes ["tenuki-board"], H.ref (Just <<< ManageTenukiGame)] []

@@ -23,9 +23,12 @@ import Ssb.Config (SSB)
 import Ssb.Friends (createFriendStream)
 import Ssb.PullStream (drainWith)
 import Ssb.Server (messagesByType)
-import Ssb.Types (SbotConn)
+import Ssb.Types (SbotConn, MessageKey)
+import Tenuki.Game (TenukiGame)
 
-data Sub a = IdentityFeeds (Maybe DevIdentity) (SubCallbacks a)
+data Sub a
+  = IdentityFeeds (Maybe DevIdentity) (SubCallbacks a)
+  | GameListeners MessageKey
 derive instance functorSub :: Functor Sub
 
 type SubCallbacks a = {igoCb :: (Json -> a), friendsCb :: (Json -> a)}
@@ -111,3 +114,5 @@ interpreter = Interpreter $ EventQueue.withAccum spec where
                   pure {sbotFibers: Just fibers, devIdentity}
                 else
                   pure m
+        GameListeners key -> do
+          pure m
