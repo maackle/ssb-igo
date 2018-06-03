@@ -24,7 +24,7 @@ viewGame model ez@{db, whoami} maybeMatch = case maybeMatch of
     let
       gameDiv = H.div
         [ H.classes ["tenuki-board"]
-        , H.ref (Just <<< (ManageTenukiGame offerPayload.terms)) ]
+        , H.ref (Just <<< (ManageTenukiGame match)) ]
         []
     in H.div []
       [ H.text "A GAME"

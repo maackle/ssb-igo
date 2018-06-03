@@ -17,6 +17,7 @@ import Data.Array (last)
 import Data.Either (Either(Right, Left))
 import Data.Lens (set)
 import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (unwrap)
 import Data.StrMap as M
 import Debug.Trace (spy, traceA, traceAnyA)
 import Halogen.VDom.DOM.Prop (ElemRef(..))
@@ -25,7 +26,7 @@ import Spork.App as App
 import Spork.Html (ElementRef)
 import Ssb.MessageTypes (AboutMessage(..))
 import Ssb.Types (UserKey)
-import Tenuki.Game (TenukiGame)
+import Tenuki.Game (TenukiGame, setGameState)
 import Tenuki.Game as Tenuki
 
 data Action
@@ -40,7 +41,7 @@ data Action
   | SetDevIdentity (DevIdentity)
 
   | ManageRef String ElementRef
-  | ManageTenukiGame GameTerms ElementRef
+  | ManageTenukiGame IndexedMatch ElementRef
   | SetTenukiGame (Maybe TenukiGame)
   | UpdateModel (Model -> Model)
   | UpdateField' (String -> Either String (Model -> Model)) String
@@ -98,9 +99,14 @@ update model = case _ of
     , effects: lift $ runEffect (E.GetIdentity (Just ident) UpdateIdentity)
     }
 
-  ManageTenukiGame terms ref -> case ref of
+  ManageTenukiGame (IndexedMatch {offerPayload, moves}) ref -> case ref of
     Created el ->
-      {model, effects: lift $ liftEff $ SetTenukiGame <$> Just <$> (Tenuki.createGame el terms)}
+      let effects = lift $ liftEff $ SetTenukiGame <$> Just <$> do
+            game <- Tenuki.createGame el offerPayload.terms
+            let steps = moves <#> (_.move <<< unwrap)
+            setGameState game steps
+            pure game
+      in {model, effects}
     Removed el ->
       {model, effects: lift $ pure $ SetTenukiGame Nothing }
 

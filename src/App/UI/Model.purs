@@ -153,6 +153,8 @@ derive instance genericIndexedMatch :: Generic IndexedMatch
 derive instance genericIndexedMove :: Generic IndexedMove
 derive instance genericMoveStep :: Generic MoveStep
 
+derive instance newtypeMoveStep :: Newtype MoveStep _
+
 instance showIndexedOffer :: Show IndexedOffer where show = gShow
 instance showIndexedDecline :: Show IndexedDecline where show = gShow
 instance showIndexedRequest :: Show IndexedRequest where show = gShow
