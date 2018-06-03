@@ -5,7 +5,7 @@ import Prelude
 import App.DB.Main (ssbIgoPlugin)
 import App.IgoMsg (BoardPosition(BoardPosition), IgoMove(PlayStone), IgoMsg(AcceptMatch, OfferMatch, WithdrawOffer, AcknowledgeDecline, DeclineMatch, ExpireRequest, RequestMatch, PlayMove), MsgKey, OfferMatchPayload, RequestMatchPayload, StoneColor(Black), SsbIgoMsg, publishMsg')
 import App.UI.ClientQueries (getDb)
-import App.UI.Model (FlumeData, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..))
+import App.UI.Model (FlumeData, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..), addUserKey)
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -110,7 +110,7 @@ main = do
     playMove :: Conn -> MsgKey -> Aff FX MsgKey
     playMove agent lastMove = do
       let
-        move = PlayStone $ BoardPosition 0 0
+        move = PlayStone $ BoardPosition {x: 0, y: 0}
         payload = {move, lastMove, subjectiveMoveNum: -1}
       ({key}) <- publishMsg' agent $ PlayMove payload
       pure key
@@ -181,18 +181,20 @@ main = do
             checkDb sbot \db ->
               M.lookup key db.offers `shouldEqual` (Just $ IndexedOffer offerData {author, key})
 
-            let declinePayload = {offerKey: key, userKey: author, reason: Just "changed my mind"}
+            let declinePayload = {offerKey: key, reason: Just "changed my mind"}
+                declinePayload' = addUserKey author declinePayload
             (declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
             checkDb sbot \db -> do
               db.offers `shouldEqual` M.empty
-              M.values db.declines `shouldEqual` [IndexedDecline declinePayload {key: declineMeta.key, author: declineMeta.author}]
+              M.values db.declines `shouldEqual` [IndexedDecline declinePayload' {key: declineMeta.key, author: declineMeta.author}]
 
         it "prevents all others from declining" $ sesh testbot \sbot -> do
           playbook3 sbot \alice bob charlie -> do
             let offerData = offerPayload bob
             ({author, key}) <- publishMsg' alice $ OfferMatch offerData
             let expected = IndexedOffer offerData {author, key}
-            let declinePayload = {offerKey: key, userKey: author, reason: Just "changed my mind"}
+                declinePayload = {offerKey: key, reason: Just "changed my mind"}
+                declinePayload' = addUserKey author declinePayload
 
             (declineMeta) <- publishMsg' alice $ DeclineMatch declinePayload
             checkDb sbot \db -> do
@@ -207,7 +209,7 @@ main = do
             (declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
             checkDb sbot \db -> do
               db.offers `shouldEqual` M.empty
-              M.values db.declines `shouldEqual` [IndexedDecline declinePayload {key: declineMeta.key, author: declineMeta.author}]
+              M.values db.declines `shouldEqual` [IndexedDecline declinePayload' {key: declineMeta.key, author: declineMeta.author}]
 
       describe "AcknowledgeDecline" do
         it "clears declines from index" $ sesh testbot \sbot -> do
@@ -216,11 +218,11 @@ main = do
             (offerMeta) <- publishMsg' alice $ OfferMatch offerData
             let declinePayload =
                   { offerKey: offerMeta.key
-                  , userKey: offerMeta.author
                   , reason: Just "changed my mind" }
+                declinePayload' = addUserKey offerMeta.author declinePayload
 
             (declineMeta) <- publishMsg' bob $ DeclineMatch declinePayload
-            let expected = IndexedDecline declinePayload {key: declineMeta.key, author: declineMeta.author}
+            let expected = IndexedDecline declinePayload' {key: declineMeta.key, author: declineMeta.author}
             (_) <- publishMsg' charlie $ AcknowledgeDecline declineMeta.key
             (_) <- publishMsg' bob $ AcknowledgeDecline declineMeta.key
             checkDb sbot \db -> do

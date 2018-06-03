@@ -13,6 +13,7 @@ import Data.Newtype (class Newtype)
 import Data.Record as Record
 import Data.StrMap (StrMap)
 import Data.StrMap as M
+import Data.Symbol (SProxy(..))
 import Debug.Trace (spy)
 import Ssb.Types (UserKey)
 import Tenuki.Game (TenukiGame)
@@ -87,6 +88,9 @@ assignColors' {myColor, opponentKey} {author} =
   case myColor of
     Black -> { black: author, white: opponentKey}
     White -> { white: author, black: opponentKey}
+
+addUserKey :: ∀ a. String -> DeclineMatchPayload -> {userKey :: String | DeclineMatchFields}
+addUserKey = Record.insert (SProxy :: SProxy "userKey")
 
 data FlumeState
   = FlumeDb FlumeData

@@ -9,6 +9,7 @@ import Ssb.Client (getClient)
 import Ssb.Config (Config(..), SSB, ConfigData, defaultConfigData)
 
 testShs = "GVZDyNf1TrZuGv3W5Dpef0vaITW1UqOUO3aWLNBp+7A="
+
 standardConfig :: ∀ fx. Eff ( ssb :: SSB | fx ) Config
 standardConfig = do
   cfg <- defaultConfigData $ Just

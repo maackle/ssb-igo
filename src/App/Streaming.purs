@@ -4,17 +4,18 @@ import Prelude
 
 import App.Common (messageTypeString)
 import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseIgoMessage)
-import App.UI.Model (FlumeData, FlumeState(..), IndexedDecline(..), IndexedMatch(..), IndexedMove(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..), assignColors')
+import App.UI.Model (FlumeData, FlumeState(..), IndexedDecline(..), IndexedMatch(..), IndexedMove(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..), addUserKey, assignColors')
 import App.Utils (trace', (&))
+import Control.Alt ((<|>))
 import Data.Argonaut (Json, fromObject, jsonNull, toObject, toString)
 import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
-import Data.Array (length, snoc)
+import Data.Array (last, length, snoc)
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), either, hush)
 import Data.Foreign (Foreign, toForeign)
 import Data.Function.Uncurried (Fn2)
 import Data.Generic (class Generic, gEq, gShow)
-import Data.Maybe (Maybe(..), fromJust, maybe)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, maybe)
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Record as Record
 import Data.StrMap (StrMap, delete, fromFoldable, insert, lookup)
@@ -27,7 +28,7 @@ import Debug.Trace (spy, trace, traceA, traceAny, traceAnyA)
 import Global.Unsafe (unsafeStringify)
 import Partial (crashWith)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
-import Ssb.Types (UserKey)
+import Ssb.Types (UserKey, MessageKey)
 
 
 
@@ -110,7 +111,7 @@ reduceFn (db) json =
         # maybe db \(IndexedOffer {opponentKey} meta) ->
           if author == opponentKey
             then
-              let payload' = Record.insert (SProxy :: SProxy "userKey") meta.author payload
+              let payload' = addUserKey meta.author payload
               in db { offers = delete offerKey db.offers
                     , declines = insert key (IndexedDecline payload' {key, author}) db.declines
                     }
@@ -157,8 +158,11 @@ reduceFn (db) json =
     msg = parseIgoMessage json # lmap \err -> trace ("bad message: " <> err <> ". json = " <> show json)
     reduceRight f = either (const db) (f <<< \m -> Tuple m.content m) msg
 
-    nextMover :: IndexedMatch -> PlayMovePayload -> UserKey
-    nextMover (IndexedMatch {offerPayload, offerMeta, moves}) movePayload@{lastMove} =
+    lastMoveKey :: IndexedMatch -> Maybe MessageKey
+    lastMoveKey (IndexedMatch {moves}) = (_.key <<< unwrap) <$> last moves
+
+    nextMover :: IndexedMatch -> UserKey
+    nextMover match@(IndexedMatch {offerPayload, offerMeta}) =
       method2
       where
         {author} = offerMeta
@@ -167,23 +171,22 @@ reduceFn (db) json =
         firstMover = if (myColor == Black) == (handicap == 0)
                         then author
                         else opponentKey
-        method2 = case M.lookup lastMove db.moves of
+        method2 = case flip M.lookup db.moves =<< lastMoveKey match of
                     Just (IndexedMove _ _ lastMeta) -> if author == lastMeta.author then opponentKey else author
                     Nothing -> firstMover
 
     validateMove :: IndexedMatch -> PlayMovePayload -> UserKey -> Maybe String
-    validateMove match@(IndexedMatch {offerPayload, offerMeta, moves}) movePayload@{move, lastMove} author =
-      case move of
-        PlayStone position ->
-          if author == nextMover match movePayload then Nothing else Just $ "not your turn to move! " <> author
-        Pass ->
-          if author == nextMover match movePayload then Nothing else Just "not your turn to pass!"
-        Resign ->
-          Nothing
+    validateMove match@(IndexedMatch {offerPayload, offerMeta, moves}) {move, lastMove} author =
+      validateLastMove <|> validatePlayer
       where
         {terms, myColor} = offerPayload
         {handicap} = terms
         {black, white} = getPlayers match
+        validateLastMove = lastMoveKey match >>= \key ->
+          if key == lastMove then Nothing else Just "move is not in response to last valid move!"
+        validatePlayer = case move of
+          Resign -> Nothing
+          _ -> if author == nextMover match then Nothing else Just $ "not your turn to move! " <> author
 
     getPlayers :: IndexedMatch -> {black :: UserKey, white :: UserKey}
     getPlayers (IndexedMatch {offerPayload, offerMeta}) =
