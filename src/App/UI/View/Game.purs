@@ -20,12 +20,15 @@ class' = classes <<< singleton
 
 viewGame :: Model -> EzModel -> Maybe IndexedMatch -> H.Html Action
 viewGame model ez@{db, whoami} maybeMatch = case maybeMatch of
-  Just match ->
-    H.div []
+  Just match@(IndexedMatch {offerPayload}) ->
+    let
+      gameDiv = H.div
+        [ H.classes ["tenuki-board"]
+        , H.ref (Just <<< (ManageTenukiGame offerPayload.terms)) ]
+        []
+    in H.div []
       [ H.text "A GAME"
       , link Dashboard H.a [] [H.text "back"]
       , gameDiv
       ]
   Nothing -> H.text "NO GAME FOUND"
-  where
-    gameDiv = H.div [H.classes ["tenuki-board"], H.ref (Just <<< ManageTenukiGame)] []

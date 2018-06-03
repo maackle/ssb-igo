@@ -2,36 +2,23 @@ module App.UI.Action where
 
 import Prelude
 
-import App.IgoMsg (IgoMsg(..), OfferMatchPayload)
-import App.IgoMsg as Msg
-import App.Streaming (decodeFlumeDb, mapFn, maybeToFlumeState, reduceFn)
+import App.IgoMsg (IgoMsg(..), OfferMatchPayload, GameTerms)
+import App.Streaming (decodeFlumeDb, mapFn, reduceFn)
 import App.UI.Effect (Affect, runEffect)
 import App.UI.Effect as E
-import App.UI.Model (DevIdentity, FlumeState(..), Model, ScratchOffer)
+import App.UI.Model (DevIdentity, FlumeState(FlumeDb, FlumeFailure, FlumeUnloaded), IndexedMatch(..), Model)
 import App.UI.Optics (ModelLens)
 import App.UI.Optics as O
-import App.UI.Routes (Route)
-import Control.Monad.Aff (Aff)
+import App.UI.Routes (Route(..))
 import Control.Monad.Aff.Console as Aff
-import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console as Eff
-import DOM.Classy.Event (preventDefault, target, toEvent)
-import DOM.Classy.Node (fromNode, nodeValue, textContent)
-import DOM.Event.KeyboardEvent as KeyboardEvent
-import DOM.Event.Types (Event, KeyboardEvent)
-import DOM.HTML.HTMLInputElement as HTMLInputElement
-import DOM.HTML.Types (HTMLInputElement)
 import Data.Argonaut (Json, decodeJson, jsonNull)
-import Data.Either (Either(..), either)
-import Data.Lens (Lens', set, (.~))
-import Data.Lens as Lens
+import Data.Array (last)
+import Data.Either (Either(Right, Left))
+import Data.Lens (set)
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as M
-import Data.String (Pattern(..))
-import Data.String as String
-import Data.Traversable (sequence)
-import Debug.Trace (spy, traceA, traceAny, traceAnyA)
+import Debug.Trace (spy, traceA, traceAnyA)
 import Halogen.VDom.DOM.Prop (ElemRef(..))
 import Spork.App (lift, purely)
 import Spork.App as App
@@ -40,7 +27,6 @@ import Ssb.MessageTypes (AboutMessage(..))
 import Ssb.Types (UserKey)
 import Tenuki.Game (TenukiGame)
 import Tenuki.Game as Tenuki
-import Text.Parsing.Parser.Token (letter)
 
 data Action
   = Noop
@@ -49,21 +35,17 @@ data Action
   | UpdateFriends Json
   | UpdateIdentity {id :: UserKey}
   -- | UpdateScratch Event (String -> ScratchOffer)
-  | PlaceStone
   | CreateOffer OfferMatchPayload
   | Publish IgoMsg
   | SetDevIdentity (DevIdentity)
 
   | ManageRef String ElementRef
-  | ManageTenukiGame ElementRef
+  | ManageTenukiGame GameTerms ElementRef
   | SetTenukiGame (Maybe TenukiGame)
   | UpdateModel (Model -> Model)
   | UpdateField' (String -> Either String (Model -> Model)) String
 
   | HandlePlayerAutocomplete (ModelLens String) String
-
-data EventDispatcher
-  = CurrentTargetDispatch
 
 
 update ∷ ∀ eff. Model -> Action -> App.Transition (Affect eff) Model Action
@@ -101,10 +83,10 @@ update model = case _ of
   -- UpdateScratch event f ->
   --   let val = target node
   --   in purely $ model { scratchOffer = f model.scratchOffer }
-  PlaceStone ->
-    { model, effects: lift $ runEffect (publish $ RequestMatch Msg.defaultRequest) }
+
   Publish msg ->
     { model, effects: lift $ runEffect (publish msg) }
+
   CreateOffer payload ->
     let msg = OfferMatch payload
     in { model, effects: lift $ runEffect (publish msg)}
@@ -116,10 +98,14 @@ update model = case _ of
     , effects: lift $ runEffect (E.GetIdentity (Just ident) UpdateIdentity)
     }
 
-  ManageTenukiGame ref -> case ref of
-    Created el -> {model, effects: lift $ liftEff $ SetTenukiGame <$> Just <$> Tenuki.createGame el}
-    Removed el -> {model, effects: lift $ pure $ SetTenukiGame Nothing }
+  ManageTenukiGame terms ref -> case ref of
+    Created el ->
+      {model, effects: lift $ liftEff $ SetTenukiGame <$> Just <$> (Tenuki.createGame el terms)}
+    Removed el ->
+      {model, effects: lift $ pure $ SetTenukiGame Nothing }
+
   SetTenukiGame game -> purely $ model { tenukiGame = game }
+
   ManageRef key ref -> case ref of
     Created el -> purely $ model { refs = M.insert key el model.refs}
     Removed el -> purely $ model { refs = M.delete key model.refs}
@@ -137,6 +123,7 @@ update model = case _ of
           Left err -> traceA err *> (pure $ UpdateModel (set (O.scratchOffer <<< O.errorMsg) $ Just err))
           Right f -> traceA "OK" *> pure $ UpdateModel f
     in { model, effects: lift effect}
+
 
   HandlePlayerAutocomplete lens val ->
     purely model

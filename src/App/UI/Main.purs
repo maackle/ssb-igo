@@ -3,11 +3,13 @@ module App.UI.Main where
 import Prelude
 
 import App.Common (getClient')
+import App.IgoMsg (BoardPosition(..), IgoMove(..), IgoMsg(..), PlayMovePayload)
 import App.IgoMsg as Msg
 import App.UI.Action (Action(..))
 import App.UI.Action as Action
-import App.UI.Effect (Effect(..), Affect, runEffect)
-import App.UI.Model (Model, initialModel)
+import App.UI.Effect (Affect, runEffect)
+import App.UI.Effect as E
+import App.UI.Model (IndexedMatch(..), Model, MoveStep(..), ezify, initialModel)
 import App.UI.Routes (Route(..), routes)
 import App.UI.Sub (Handler, Sub(..))
 import App.UI.Sub as Sub
@@ -32,8 +34,11 @@ import Data.Foldable (for_)
 import Data.Foldable as F
 import Data.Maybe (Maybe(..))
 import Data.Monoid (mempty)
+import Data.Newtype (wrap)
+import Data.StrMap as M
 import Data.Traversable (for)
 import Data.Tuple (Tuple(..))
+import Debug.Trace (spy, traceAny)
 import Routing.Hash (hashes, matches)
 import Simple.JSON (readJSON, writeJSON)
 import Spork.App as App
@@ -42,14 +47,36 @@ import Spork.Interpreter (Interpreter(..), basicAff, liftNat, merge, never, thro
 import Ssb.Config (SSB)
 
 
+dispatchBoardMove :: Model -> BoardPosition -> Action
+dispatchBoardMove model pos =
+  case model.route, ezify model of
+    ViewGame key, Just ez ->
+      case M.lookup key ez.db.matches of
+        Nothing ->
+          Noop
+        Just (IndexedMatch {moves, acceptMeta}) ->
+          case Array.last moves of
+            Nothing ->
+              Publish $ PlayMove
+                { lastMove: acceptMeta.key
+                , move: PlayStone pos
+                , subjectiveMoveNum: -1
+                }
+            Just (MoveStep {key}) ->
+              Publish $ PlayMove
+                { lastMove: key
+                , move: PlayStone pos
+                , subjectiveMoveNum: -1
+                }
+    _, _ -> Noop
 
 subs :: Model -> App.Batch Sub Action
-subs {devIdentity, route} =
+subs model@{devIdentity, tenukiGame} =
   App.batch $ identityFeeds <> games
   where
     identityFeeds = singleton $ IdentityFeeds devIdentity {igoCb: UpdateFlume, friendsCb: UpdateFriends}
-    games = case route of
-      ViewGame key -> singleton $ GameListeners key
+    games = case tenukiGame of
+      Just game -> singleton $ MoveListener game (dispatchBoardMove model <<< wrap)
       _ -> []
 
 app ∷ App.App (Aff FX) Sub Model Action
@@ -61,7 +88,7 @@ app =
   }
   where
     model = initialModel
-    effects = App.lift $ runEffect $ GetIdentity initialModel.devIdentity UpdateIdentity
+    effects = App.lift $ runEffect $ E.GetIdentity initialModel.devIdentity UpdateIdentity
 
 type FX = App.AppEffects (ssb :: SSB, console :: Eff.CONSOLE)
 

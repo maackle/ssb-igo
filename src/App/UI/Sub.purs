@@ -3,6 +3,8 @@ module App.UI.Sub where
 import Prelude hiding (sub)
 
 import App.Common (getClient')
+import App.IgoMsg (IgoMove, BoardPositionData)
+import App.UI.Action (Action)
 import App.UI.ClientQueries (devClient, getStream)
 import App.UI.Model (DevIdentity)
 import Control.Monad.Aff (Fiber, error, joinFiber, killFiber, launchAff, launchAff_)
@@ -15,7 +17,7 @@ import Data.Argonaut (Json)
 import Data.Foreign (toForeign)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Traversable (traverse)
-import Debug.Trace (traceA, traceAnyA)
+import Debug.Trace (traceA, traceAny, traceAnyA)
 import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
 import Spork.EventQueue as EventQueue
 import Spork.Interpreter (Interpreter(..))
@@ -24,11 +26,11 @@ import Ssb.Friends (createFriendStream)
 import Ssb.PullStream (drainWith)
 import Ssb.Server (messagesByType)
 import Ssb.Types (SbotConn, MessageKey)
-import Tenuki.Game (TenukiGame)
+import Tenuki.Game (TenukiGame, setMoveCallback)
 
 data Sub a
   = IdentityFeeds (Maybe DevIdentity) (SubCallbacks a)
-  | GameListeners MessageKey
+  | MoveListener TenukiGame (BoardPositionData -> a)
 derive instance functorSub :: Functor Sub
 
 type SubCallbacks a = {igoCb :: (Json -> a), friendsCb :: (Json -> a)}
@@ -114,5 +116,11 @@ interpreter = Interpreter $ EventQueue.withAccum spec where
                   pure {sbotFibers: Just fibers, devIdentity}
                 else
                   pure m
-        GameListeners key -> do
+        MoveListener game cb -> do
+          setMoveCallback game $ \pos -> do
+            let action = cb pos
+            traceA "aaaction"
+            traceAnyA action
+            queue.push action
+            queue.run
           pure m

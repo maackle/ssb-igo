@@ -11,6 +11,7 @@ import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
 import Data.Either (Either(..), fromRight)
 import Data.Generic (class Generic)
 import Data.Maybe (Maybe)
+import Data.Newtype (class Newtype)
 import Data.StrMap as M
 import Partial (crashWith)
 import Partial.Unsafe (unsafePartial)
@@ -61,12 +62,14 @@ type GameTerms =
 
 data StoneColor = White | Black
 
-newtype BoardPosition = BoardPosition {x :: Int, y :: Int}
+newtype BoardPosition = BoardPosition BoardPositionData
+type BoardPositionData = {x :: Int, y :: Int}
 
 derive instance genericIgoMsg :: Generic IgoMsg
 derive instance genericIgoMove :: Generic IgoMove
 derive instance genericStoneColor :: Generic StoneColor
 derive instance genericBoardPosition :: Generic BoardPosition
+derive instance newtypeBoardPosition :: Newtype BoardPosition _
 
 derive instance eqStoneColor :: Eq StoneColor
 

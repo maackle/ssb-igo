@@ -1,9 +1,12 @@
 const tenuki = require('tenuki')
 
-exports.createGame = element => () => {
-  const game = new tenuki.Game({element})
-  console.log('TENUKI SETUP', element, game)
+exports._createGame = element => terms => () => {
+  const game = new tenuki.Game(Object.assign({element}, terms))
   return game
+}
+
+exports.setMoveCallback = game => cb => () => {
+  game.callbacks.postMove = (...args) => cb(...args)()
 }
 
 exports.playPass = opts => game => () => game.playPass(opts)

@@ -2,11 +2,26 @@
 
 var tenuki = require('tenuki');
 
-exports.createGame = function (element) {
-  return function () {
-    var game = new tenuki.Game({ element: element });
-    console.log('TENUKI SETUP', element, game);
-    return game;
+exports._createGame = function (element) {
+  return function (terms) {
+    return function () {
+      var game = new tenuki.Game(Object.assign({ element: element }, terms));
+      return game;
+    };
+  };
+};
+
+exports.setMoveCallback = function (game) {
+  return function (cb) {
+    return function () {
+      game.callbacks.postMove = function () {
+        for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+          args[_key] = arguments[_key];
+        }
+
+        return cb.apply(undefined, args)();
+      };
+    };
   };
 };
 
