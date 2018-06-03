@@ -278,6 +278,20 @@ main = do
                             moves <#> \(MoveStep {key}) -> key
               moveKeys `shouldEqual` Just [m1, m2]
 
+        it "disallows move trees" $ sesh testbot \sbot -> do
+          playbook2 sbot \alice bob -> do
+            match <- setupMatch alice bob Black 0
+            m1 <- playMove alice match
+            m2 <- playMove bob match
+            m3 <- playMove alice m2
+            m4 <- playMove bob m1
+            checkDb sbot \db -> do
+              let
+                moveKeys :: Maybe (Array MsgKey)
+                moveKeys = M.lookup match db.matches <#> \(IndexedMatch {moves}) ->
+                             moves <#> \(MoveStep {key}) -> key
+              moveKeys `shouldEqual` Just [m1, m4]
+
         describe "first move detection" do
           it "does even games" $ sesh testbot \sbot ->
             playbook2 sbot \alice bob -> do

@@ -125,30 +125,30 @@ reduceFn (db) json =
             else db
 
     Tuple (PlayMove payload@{move, lastMove}) {author, key} ->
-      let
-        -- there was a last move?
-        maybePrev = M.lookup lastMove db.moves
-        -- ascertain root accept key
-        rootAccept = maybePrev # maybe lastMove \(IndexedMove _ d _) -> d.rootAccept
-        -- look up the match based on root accept
-        _ = traceAny maybePrev
-        _ = traceAny rootAccept
-        match = case M.lookup rootAccept db.matches of
-          Just m -> m
-          Nothing -> unsafeCrashWith $ "can't find match: " <> rootAccept
+      let maybeMatch =
+            case M.lookup lastMove db.moves, M.lookup lastMove db.matches of
+              Nothing, Just match ->
+                Just match
+              Just (IndexedMove _ {rootAccept} _), Nothing ->
+                M.lookup rootAccept db.matches
+              _, _ -> Nothing  -- NB: also handles case of Just, Just, which is absurd
+      in case maybeMatch of
+        Nothing ->
+          trace ("invalid message chain") $ const db
+        Just match@(IndexedMatch {acceptMeta}) ->
+          let rootAccept = acceptMeta.key
+              moveError = validateMove match payload author
+          in case moveError of
+            Nothing ->
+              let
+                newMove = IndexedMove payload {rootAccept} {key, author}
+                moveStep = MoveStep {move, key}
+                newMatch = match # unwrap >>> (\m -> m { moves = snoc m.moves moveStep }) >>> wrap
+              in db { moves   = M.insert key newMove db.moves
+                    , matches = M.insert rootAccept newMatch db.matches }
+            Just err ->
+              trace ("move validation error: " <> err) $ const db
 
-        moveError = validateMove match payload author
-      in
-        case moveError of
-          Nothing ->
-            let
-              newMove = IndexedMove payload {rootAccept} {key, author}
-              moveStep = MoveStep {move, key}
-              newMatch = match # unwrap >>> (\m -> m { moves = snoc m.moves moveStep }) >>> wrap
-            in db { moves   = M.insert key newMove db.moves
-                  , matches = M.insert rootAccept newMatch db.matches }
-          Just err ->
-            trace ("move validation error: " <> err) $ const db
 
     Tuple (Kibitz payload) _ ->
       trace' "TODO" db
