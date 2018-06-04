@@ -292,6 +292,8 @@ main = do
                              moves <#> \(MoveStep {key}) -> key
               moveKeys `shouldEqual` Just [m1, m4]
 
+        pending "sets subjectiveMoveNum"
+
         describe "first move detection" do
           it "does even games" $ sesh testbot \sbot ->
             playbook2 sbot \alice bob -> do

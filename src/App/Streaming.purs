@@ -183,7 +183,11 @@ reduceFn (db) json =
         {handicap} = terms
         {black, white} = getPlayers match
         validateLastMove = lastMoveKey match >>= \key ->
-          if key == lastMove then Nothing else Just "move is not in response to last valid move!"
+          if spy key == spy lastMove
+          then Nothing
+          else Just $ "move is not in response to last valid move! "
+                   <> author <> " || "
+                   <> key
         validatePlayer = case move of
           Resign -> Nothing
           _ -> if author == nextMover match then Nothing else Just $ "not your turn to move! " <> author

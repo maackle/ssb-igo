@@ -1,7 +1,7 @@
-"use strict";
+'use strict';
 
-var pull = require("pull-stream");
-var Reduce = require("flumeview-reduce");
+var pull = require('pull-stream');
+var Reduce = require('flumeview-reduce');
 
 exports.mkFlumeReducer = function (version) {
   return function (reducer) {
@@ -37,6 +37,7 @@ exports.flumeUse = function (sbot) {
 
 exports.liveStream = function (view) {
   return function () {
+    console.log('new stream');
     return view.stream({ live: true });
   };
 };

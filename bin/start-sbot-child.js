@@ -41,42 +41,25 @@ function startSbot (path, port) {
   return sbot
 }
 
-const main = startSbot('./ssb-data', 8088)
-const devs = ['alice', 'bob', 'charlie'].map((name, i) => {
-  const port = 8081 + i
-  const sbot = startSbot(`./ssb-dev/${name}`, port)
-  sbot.port = port
-  sbot.name = name
-  return sbot
+const name = process.argv[2]
+const port = process.argv[3]
+
+const sbot = startSbot(`./ssb-dev/${name}`, port)
+
+sbot.publish({
+  type: 'about',
+  about: sbot.id,
+  name: name,
+}, () => {})
+
+process.send({
+  name, port, id: sbot.id
 })
 
-if (process.argv[2]) {
-  let pubs = 0
-  console.log("Setting up follow graph")
-  devs.forEach(dev1 => {
-    dev1.publish({
-      type: 'about',
-      about: dev1.id,
-      name: dev1.name,
-    }, () => {})
-    devs.forEach(dev2 => {
-      if (dev1.id !== dev2.id) {
-        console.log(`${dev1.name} => ${dev2.name}`)
-        dev1.gossip.enable('local', (err, blah) => {
-          dev1.gossip.add({
-            host: 'localhost',
-            port: dev2.port,
-            key: dev2.id,
-          })
-        })
-        dev1.publish({
-          type: 'contact',
-          contact: dev2.id,
-          following: true,
-        }, () => {})//, (err, msg) => {if (++pubs == 6) feed0()})
-      }
-    })
+process.on('message', ({gossip, contact}) => {
+  console.log('gossip', gossip, 'contact', contact)
+  sbot.gossip.enable('local', (err, _) => {
+    sbot.gossip.add(gossip)
   })
-} else {
-
-}
+  sbot.publish(contact, () => {})
+})

@@ -64,7 +64,7 @@ update model = case _ of
       FlumeUnloaded, Nothing -> model { flume = FlumeFailure "Flume index not intitialized"}
       FlumeDb flume, Nothing ->
         let mapped = mapFn json
-        in if spy $ mapped == jsonNull
+        in if mapped == jsonNull
           then model
           else model { flume = FlumeDb $ reduceFn flume mapped }
   UpdateFriends json ->

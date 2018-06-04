@@ -9,7 +9,7 @@
     "dev": "concurrently --raw --kill-others \"bin/watch-es6.sh\"",
     "electron": "electron ./electron/main.js",
     "sbot": "node bin/start-sbot.js",
-    "sbot:init": "node bin/start-sbot.js yes",
+    "sbot:init": "node bin/start-sbots.js yes",
     "start": "npm run build && parcel index.html",
     "test": "pulp test"
   },

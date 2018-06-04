@@ -18,6 +18,7 @@ exports.flumeUse =
 
 exports.liveStream =
   view => () => {
+    console.log('new stream')
     return view.stream({live: true})
   }
 

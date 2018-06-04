@@ -15,7 +15,7 @@ import Control.Monad.Eff.Console (CONSOLE, info)
 import Control.Monad.Eff.Console as Eff
 import Data.Argonaut (Json)
 import Data.Foreign (toForeign)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.Traversable (traverse)
 import Debug.Trace (traceA, traceAny, traceAnyA)
 import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
@@ -51,6 +51,7 @@ type Handler eff = (Json -> E eff Boolean)
 type SubState eff =
   { devIdentity :: Maybe DevIdentity
   , sbotFibers :: Maybe (FiberArray eff)
+  , tenukiGame :: Maybe TenukiGame
   }
 type FiberArray eff = (Array (Fiber (FX eff) Unit))
 
@@ -96,6 +97,7 @@ interpreter = Interpreter $ EventQueue.withAccum spec where
     init =
       { devIdentity: Nothing
       , sbotFibers: Nothing
+      , tenukiGame: Nothing
       }
 
     commit = pure
@@ -107,20 +109,22 @@ interpreter = Interpreter $ EventQueue.withAccum spec where
           case m.sbotFibers of
             Nothing -> do
               fibers :: FiberArray eff <- setupListeners devIdentity callbacks
-              pure {sbotFibers: Just fibers, devIdentity}
+              pure m {sbotFibers = Just fibers, devIdentity = devIdentity}
             Just fibers ->
               if devIdentity /= m.devIdentity
                 then do
                   launchAff_ $ traverse (killFiber (error "can't clean up the drainWith")) fibers
                   fibers' :: FiberArray eff <- setupListeners devIdentity callbacks
-                  pure {sbotFibers: Just fibers, devIdentity}
+                  pure m {sbotFibers = Just fibers, devIdentity = devIdentity}
                 else
                   pure m
         MoveListener game cb -> do
-          setMoveCallback game $ \pos -> do
+          maybe
+            (pure unit)
+            (flip setMoveCallback \_ -> pure unit)
+            m.tenukiGame
+          setMoveCallback game \pos -> do
             let action = cb pos
-            traceA "aaaction"
-            traceAnyA action
             queue.push action
             queue.run
-          pure m
+          pure m { tenukiGame = Just game }

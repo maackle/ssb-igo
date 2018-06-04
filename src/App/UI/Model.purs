@@ -14,7 +14,6 @@ import Data.Record as Record
 import Data.StrMap (StrMap)
 import Data.StrMap as M
 import Data.Symbol (SProxy(..))
-import Debug.Trace (spy)
 import Ssb.Types (UserKey)
 import Tenuki.Game (TenukiGame)
 

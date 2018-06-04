@@ -33,8 +33,8 @@ ssbIgoPlugin =
   where
     init sbot = do
       view <- flumeUse sbot "ssb-igo" flumeReducer
-      pure { streamDb: liveStream view
-           , rawGet:  _rawGet view  -- NOTE: the FFI here is hosed
+      pure { streamDb: (liveStream view) :: Eff _ PullStream
+           , rawGet: _rawGet view  -- NOTE: the FFI here is hosed
            -- , rawTestFeed: rawTestFeed
            }
       where

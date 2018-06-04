@@ -10,8 +10,10 @@ exports._drainWith = function (stream) {
         return fn(d)();
       };
       var abortable = Abortable();
+      var tag = Math.random();
+      console.log("listen to ", tag);
       pull(stream, abortable, pull.through(function (x) {
-        return console.log("piping thru", x);
+        return console.log("piping thru", tag, x);
       }), pull.drain(op, success));
       return function (ce, cre, cs) {
         console.info("aborting drain");

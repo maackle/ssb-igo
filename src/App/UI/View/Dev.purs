@@ -12,11 +12,12 @@ devToolbar ez =
   H.div [H.classes ["dev-toolbar"], H.style "display: flex; width: 100%"]
     [ H.a [H.href "#", H.onClick $ const $ Just $ SetDevIdentity Alice]
       [ H.text "alice" ]
-    , H.text " "
+    , H.text " || "
     , H.a [H.href "#", H.onClick $ const $ Just $ SetDevIdentity Bob]
       [ H.text "bob" ]
-    , H.text " "
+    , H.text " || "
     , H.a [H.href "#", H.onClick $ const $ Just $ SetDevIdentity Charlie]
       [ H.text "charlie" ]
+    , H.text " "
     , H.span [] [H.text ez.whoami]
     ]

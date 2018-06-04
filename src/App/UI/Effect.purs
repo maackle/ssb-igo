@@ -50,14 +50,12 @@ runEffect = case _ of
   Publish ident payload next -> do
     sbot <- maybe getClient' devClient ident
     msg <- Msg.publishMsg' sbot payload
-    traceAnyA msg
     pure next
   GetIdentity ident next -> do
     sbot <- maybe getClient' devClient ident
     who <- whoami sbot
     pure $ next who
   ReturnEventTarget event next -> liftEff do
-    traceAnyA $ currentTarget event
     val <- nodeValue $ currentTarget event
     Eff.log val
     pure $ next val
