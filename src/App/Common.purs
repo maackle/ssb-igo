@@ -4,7 +4,9 @@ import Prelude
 
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
+import Data.Array as Array
 import Data.Maybe (Maybe(..))
+import Spork.Html as H
 import Ssb.Client (getClient)
 import Ssb.Config (Config(..), SSB, ConfigData, defaultConfigData)
 
@@ -26,3 +28,10 @@ devConfig path port = do
 getClient' = getClient =<< liftEff standardConfig
 
 messageTypeString = "ssb-igo"
+
+
+div_ :: ∀ a. String -> Array (H.Html a) -> H.Html a
+div_ k = H.div [H.classes [k]]
+
+
+class' = H.classes <<< Array.singleton

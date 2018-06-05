@@ -2,6 +2,7 @@ module App.UI.View.MakeOffer where
 
 import Prelude
 
+import App.Common (div_)
 import App.IgoMsg (StoneColor(..))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, Model, User, scratchOfferToOfferPayload)
@@ -17,9 +18,6 @@ import Data.String (Pattern(..))
 import Data.String as String
 import Spork.Html (classes)
 import Spork.Html as H
-
-div_ :: ∀ a. String -> Array (H.Html a) -> H.Html a
-div_ k = H.div [classes [k]]
 
 playersForm :: Model -> EzModel -> H.Html Action
 playersForm model@{scratchOffer} {whoami, myName} =
