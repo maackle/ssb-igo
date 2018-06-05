@@ -3,23 +3,26 @@ module App.UI.View.Game where
 import Prelude
 
 import App.Common (div_)
+import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), assignColors')
 import App.IgoMsg (IgoMsg(..), StoneColor(..))
 import App.UI.Action (Action(..))
-import App.UI.Model (EzModel, IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), Model, assignColors')
+import App.UI.Model (EzModel, Model)
 import App.UI.Routes (Route(..))
 import App.UI.View.Components (link, userKeyMarkup)
 import App.UI.View.MakeOffer (offerForm)
 import Data.Array (filter, intercalate, length, singleton)
 import Data.Array.NonEmpty (replicate)
 import Data.Foldable (find)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as M
+import Debug.Trace (spy, trace, traceAny)
 import Spork.Html (classes)
 import Spork.Html as H
+import Tenuki.Game as Tenuki
 
 
 viewGame :: Model -> EzModel -> Maybe IndexedMatch -> H.Html Action
-viewGame model ez@{db, whoami} maybeMatch = case maybeMatch of
+viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
   Just match@(IndexedMatch {offerPayload}) ->
     let
       gameDiv = H.div
@@ -31,12 +34,19 @@ viewGame model ez@{db, whoami} maybeMatch = case maybeMatch of
           [ div_ "key" [H.text k]
           , div_ "val" [H.text v]
           ]
+      gameState = Tenuki.currentState <$> tenukiGame
+      blackCaps = maybe 0 _.blackStonesCaptured gameState
+      whiteCaps = maybe 0 _.whiteStonesCaptured gameState
       blackPlayer = H.div [H.classes ["player", "my-turn"]]
         [ div_ "turn-notification" [H.text "your turn"]
         , div_ "name" [H.text "maackle"]
-        , div_ "caps" [H.text "captures: 5"]
+        , div_ "caps" [H.text $ "captures: " <> show whiteCaps]
         ]
-      whitePlayer = blackPlayer
+      whitePlayer = H.div [H.classes ["player", "my-turn"]]
+        [ div_ "turn-notification" [H.text "your turn"]
+        , div_ "name" [H.text "maackle"]
+        , div_ "caps" [H.text $ "captures: " <> show blackCaps]
+        ]
 
       passButton = H.button [H.classes ["pass"]] [H.text "pass"]
       resignButton = H.button [H.classes ["resign"]] [H.text "resign"]
@@ -58,7 +68,7 @@ viewGame model ez@{db, whoami} maybeMatch = case maybeMatch of
             [ passButton, resignButton]
           , datum "move" "101"
           , datum "komi" "0.5"
-          , datum "handicap" "2"
+          , datum "hand." "2"
           ]
         , div_ "kibitz-container"
           [ div_ "kibitzes" kibitzes

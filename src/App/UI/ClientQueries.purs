@@ -3,8 +3,8 @@ module App.UI.ClientQueries where
 import Prelude
 
 import App.Common (devConfig, getClient')
-import App.Streaming (decodeFlumeDb)
-import App.UI.Model (DevIdentity(..), FlumeData)
+import App.Flume (decodeFlumeDb, FlumeData)
+import App.UI.Model (DevIdentity(..))
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Compat (EffFnAff(..), fromEffFnAff)
 import Control.Monad.Eff (Eff)

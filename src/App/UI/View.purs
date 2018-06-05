@@ -2,9 +2,9 @@ module App.UI.View where
 
 import Prelude
 
-import App.Streaming (encodeFlumeDb)
+import App.Flume (FlumeState(FlumeDb), IndexedRequest(IndexedRequest), encodeFlumeDb)
 import App.UI.Action (Action)
-import App.UI.Model (FlumeState(FlumeDb), IndexedRequest(IndexedRequest), Model, EzModel, ezify)
+import App.UI.Model (Model, EzModel, ezify)
 import App.UI.Routes (Route(..))
 import App.UI.View.Dashboard as View
 import App.UI.View.Dev as Dev

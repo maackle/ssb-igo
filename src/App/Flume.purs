@@ -1,10 +1,9 @@
-module App.Streaming where
+module App.Flume where
 
 import Prelude
 
 import App.Common (messageTypeString)
-import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseIgoMessage)
-import App.UI.Model (FlumeData, FlumeState(..), IndexedDecline(..), IndexedMatch(..), IndexedMove(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..), addUserKey, assignColors')
+import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, DeclineMatchFields, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseIgoMessage)
 import App.Utils (trace', (&))
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, fromObject, jsonNull, toObject, toString)
@@ -30,6 +29,67 @@ import Partial (crashWith)
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 import Ssb.Types (UserKey, MessageKey)
 
+
+type FlumeData =
+  { offers :: StrMap IndexedOffer
+  , declines :: StrMap IndexedDecline
+  , requests :: StrMap IndexedRequest
+  , matches :: StrMap IndexedMatch
+  , moves :: StrMap IndexedMove
+  }
+
+data FlumeState
+  = FlumeDb FlumeData
+  | FlumeUnloaded
+  | FlumeFailure String
+
+initialDb :: FlumeData
+initialDb =
+  { offers: M.empty
+  , declines: M.empty
+  , requests: M.empty
+  , matches: M.empty
+  , moves: M.empty
+  }
+
+
+-- TODO: make newtype
+data IndexedOffer = IndexedOffer OfferMatchPayload {author :: UserKey, key :: MsgKey}
+data IndexedDecline = IndexedDecline {userKey :: UserKey | DeclineMatchFields} {author :: UserKey, key :: MsgKey}
+data IndexedRequest = IndexedRequest RequestMatchPayload {author :: UserKey, key :: MsgKey}
+data IndexedMove = IndexedMove PlayMovePayload {rootAccept :: MsgKey} {author :: UserKey, key :: MsgKey}
+newtype IndexedMatch = IndexedMatch
+  { acceptPayload :: AcceptMatchPayload
+  , offerPayload :: OfferMatchPayload
+  , moves :: (Array MoveStep)
+  , acceptMeta :: {author :: UserKey, key :: MsgKey}
+  , offerMeta :: {author :: UserKey, key :: MsgKey}
+  }
+derive instance newtypeIndexedMatch :: Newtype IndexedMatch _
+
+newtype MoveStep = MoveStep {move :: IgoMove, key :: MsgKey}
+type OpponentKey = UserKey
+
+derive instance genericIndexedOffer :: Generic IndexedOffer
+derive instance genericIndexedDecline :: Generic IndexedDecline
+derive instance genericIndexedRequest :: Generic IndexedRequest
+derive instance genericIndexedMatch :: Generic IndexedMatch
+derive instance genericIndexedMove :: Generic IndexedMove
+derive instance genericMoveStep :: Generic MoveStep
+
+derive instance newtypeMoveStep :: Newtype MoveStep _
+
+instance showIndexedOffer :: Show IndexedOffer where show = gShow
+instance showIndexedDecline :: Show IndexedDecline where show = gShow
+instance showIndexedRequest :: Show IndexedRequest where show = gShow
+instance showIndexedMatch :: Show IndexedMatch where show = gShow
+instance showIndexedMove :: Show IndexedMove where show = gShow
+
+instance eqIndexedOffer :: Eq IndexedOffer where eq = gEq
+instance eqIndexedDecline :: Eq IndexedDecline where eq = gEq
+instance eqIndexedRequest :: Eq IndexedRequest where eq = gEq
+instance eqIndexedMatch :: Eq IndexedMatch where eq = gEq
+instance eqIndexedMove :: Eq IndexedMove where eq = gEq
 
 
 decodeFlumeDb :: Json -> Maybe FlumeData
@@ -63,6 +123,19 @@ data MessageType
   = ValidPayload Json
   | PrivateMessage
   | InvalidMessage
+
+
+assignColors :: IndexedOffer -> {black :: UserKey, white :: UserKey}
+assignColors (IndexedOffer payload meta) = assignColors' payload meta
+
+assignColors' :: ∀ a. OfferMatchPayload -> { author :: UserKey | a} -> {black :: UserKey, white :: UserKey}
+assignColors' {myColor, opponentKey} {author} =
+  case myColor of
+    Black -> { black: author, white: opponentKey}
+    White -> { white: author, black: opponentKey}
+
+addUserKey :: ∀ a. String -> DeclineMatchPayload -> {userKey :: String | DeclineMatchFields}
+addUserKey = Record.insert (SProxy :: SProxy "userKey")
 
 
 reduceFn :: ReduceFn
@@ -197,7 +270,7 @@ reduceFn (db) json =
       assignColors' offerPayload offerMeta
 
 mapFn :: MapFn
-mapFn json = if isValidMessage json then json else trace' ("dropped message: " <> show json) jsonNull
+mapFn json = if isValidMessage json then json else jsonNull
 
 isValidMessage :: Json -> Boolean
 isValidMessage json = maybe false ((==) messageTypeString) (messageType json)

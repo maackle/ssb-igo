@@ -3,10 +3,10 @@ module App.UI.Action where
 import Prelude
 
 import App.IgoMsg (IgoMsg(..), OfferMatchPayload, GameTerms)
-import App.Streaming (decodeFlumeDb, mapFn, reduceFn)
+import App.Flume (FlumeState(..), IndexedMatch(..), decodeFlumeDb, mapFn, reduceFn)
 import App.UI.Effect (Affect, runEffect)
 import App.UI.Effect as E
-import App.UI.Model (DevIdentity, FlumeState(FlumeDb, FlumeFailure, FlumeUnloaded), IndexedMatch(..), Model)
+import App.UI.Model (DevIdentity, Model)
 import App.UI.Optics (ModelLens)
 import App.UI.Optics as O
 import App.UI.Routes (Route(..))

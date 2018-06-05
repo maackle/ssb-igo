@@ -3,13 +3,14 @@ module App.UI.Main where
 import Prelude
 
 import App.Common (getClient')
+import App.Flume (IndexedMatch(..), MoveStep(..))
 import App.IgoMsg (BoardPosition(..), IgoMove(..), IgoMsg(..), PlayMovePayload)
 import App.IgoMsg as Msg
 import App.UI.Action (Action(..))
 import App.UI.Action as Action
 import App.UI.Effect (Affect, runEffect)
 import App.UI.Effect as E
-import App.UI.Model (IndexedMatch(..), Model, MoveStep(..), ezify, initialModel)
+import App.UI.Model (Model, ezify, initialModel)
 import App.UI.Routes (Route(..), routes)
 import App.UI.Sub (Handler, Sub(..))
 import App.UI.Sub as Sub

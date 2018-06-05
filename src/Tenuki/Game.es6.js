@@ -9,6 +9,8 @@ exports.setMoveCallback = game => cb => () => {
   game.callbacks.postMove = (...args) => cb(...args)()
 }
 
+exports.currentState = game => game.currentState()
+
 exports.playPass = opts => game => () => game.playPass(opts)
 exports.playResign = opts => game => () => game.playResign(opts)
 exports.playAt = opts => ({x, y}) => game => () => game.playAt(y, x, opts)

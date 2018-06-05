@@ -16,6 +16,20 @@ type TenukiCallbacks a =
   }
 
 type TenukiTerms = {boardSize :: Int, handicapStones :: Int, komi :: Number}
+type TenukiGameState =
+  {  moveNumber :: Int
+  ,  playedPoint :: Maybe BoardPositionData
+  ,  color :: String
+  ,  pass :: Boolean
+  ,  blackPassStones :: Int
+  ,  whitePassStones :: Int
+  -- ,  intersections :: Int
+  ,  blackStonesCaptured :: Int
+  ,  whiteStonesCaptured :: Int
+  ,  capturedPositions :: Array (Maybe BoardPositionData)
+  -- ,  koPoint :: Int
+  ,  boardSize :: Int
+  }
 type PlayOpts = {render :: Boolean}
 
 setGameState :: ∀ e. TenukiGame -> Array IgoMove -> Eff e Unit
@@ -39,3 +53,4 @@ foreign import playPass :: ∀ e. PlayOpts -> TenukiGame -> Eff e Unit
 foreign import playResign :: ∀ e. PlayOpts -> TenukiGame -> Eff e Unit
 foreign import playAt :: ∀ e. PlayOpts -> BoardPositionData -> TenukiGame -> Eff e Unit
 foreign import render :: ∀ e. TenukiGame -> Eff e Unit
+foreign import currentState :: ∀ e. TenukiGame -> TenukiGameState

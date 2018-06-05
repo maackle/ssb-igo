@@ -25,6 +25,10 @@ exports.setMoveCallback = function (game) {
   };
 };
 
+exports.currentState = function (game) {
+  return game.currentState();
+};
+
 exports.playPass = function (opts) {
   return function (game) {
     return function () {

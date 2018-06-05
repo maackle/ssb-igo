@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pulp build",
     "bundle": "pulp build -I src --to dist/bundle.js -m App.UI.Main",
-    "dev": "concurrently --raw --kill-others \"bin/watch-es6.sh\"",
+    "dev": "concurrently --raw --kill-others \"bin/watch-es6.sh\" \"sass --watch electron/style:electron/build\"",
     "electron": "electron ./electron/main.js",
     "sbot": "node bin/start-sbot.js",
     "sbot:init": "node bin/start-sbots.js yes",

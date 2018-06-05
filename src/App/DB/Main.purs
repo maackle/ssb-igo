@@ -2,8 +2,7 @@ module App.DB.Main where
 
 import Prelude
 
-import App.Streaming (MapFn, ReduceFnImpl, decodeFlumeDb, encodeFlumeDb, mapFn, reduceFn)
-import App.UI.Model (FlumeData, FlumeState(..), initialDb)
+import App.Flume (FlumeData, MapFn, ReduceFnImpl, decodeFlumeDb, encodeFlumeDb, initialDb, mapFn, reduceFn)
 import App.Utils (trace')
 import Control.Monad.Aff.Compat (EffFnAff(..), fromEffFnAff)
 import Control.Monad.Eff (Eff)
@@ -80,4 +79,4 @@ foreign import mkFlumeReducer :: String -> ReduceFnImpl -> MapFn -> FlumeData ->
 foreign import mkFlumeReducer1 :: String -> ReduceFnImpl -> MapFn -> Codec FlumeData -> FlumeData -> FlumeReducer
 foreign import flumeUse :: ∀ fx. Sbot -> String -> FlumeReducer -> Eff (ssb :: SSB | fx) FlumeView
 foreign import liveStream :: ∀ fx. FlumeView -> Eff (ssb :: SSB | fx) PullStream
-foreign import _rawGet :: ∀ fx. FlumeView -> (FlumeData -> Unit)   -- NOTE: the FFI here is hosed
+foreign import _rawGet :: FlumeView -> (FlumeData -> Unit)   -- NOTE: the FFI here is hosed
