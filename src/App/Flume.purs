@@ -125,8 +125,8 @@ data MessageType
   | InvalidMessage
 
 
-assignColors :: IndexedOffer -> {black :: UserKey, white :: UserKey}
-assignColors (IndexedOffer payload meta) = assignColors' payload meta
+assignColors :: IndexedMatch -> {black :: UserKey, white :: UserKey}
+assignColors (IndexedMatch {offerPayload, offerMeta}) = assignColors' offerPayload offerMeta
 
 assignColors' :: ∀ a. OfferMatchPayload -> { author :: UserKey | a} -> {black :: UserKey, white :: UserKey}
 assignColors' {myColor, opponentKey} {author} =
@@ -231,23 +231,6 @@ reduceFn (db) json =
     msg = parseIgoMessage json # lmap \err -> trace ("bad message: " <> err <> ". json = " <> show json)
     reduceRight f = either (const db) (f <<< \m -> Tuple m.content m) msg
 
-    lastMoveKey :: IndexedMatch -> Maybe MessageKey
-    lastMoveKey (IndexedMatch {moves}) = (_.key <<< unwrap) <$> last moves
-
-    nextMover :: IndexedMatch -> UserKey
-    nextMover match@(IndexedMatch {offerPayload, offerMeta}) =
-      method2
-      where
-        {author} = offerMeta
-        {terms, myColor, opponentKey} = offerPayload
-        {handicap} = terms
-        firstMover = if (myColor == Black) == (handicap == 0)
-                        then author
-                        else opponentKey
-        method2 = case flip M.lookup db.moves =<< lastMoveKey match of
-                    Just (IndexedMove _ _ lastMeta) -> if author == lastMeta.author then opponentKey else author
-                    Nothing -> firstMover
-
     validateMove :: IndexedMatch -> PlayMovePayload -> UserKey -> Maybe String
     validateMove match@(IndexedMatch {offerPayload, offerMeta, moves}) {move, lastMove} author =
       validateLastMove <|> validatePlayer
@@ -263,11 +246,28 @@ reduceFn (db) json =
                    <> key
         validatePlayer = case move of
           Resign -> Nothing
-          _ -> if author == nextMover match then Nothing else Just $ "not your turn to move! " <> author
+          _ -> if author == nextMover db match then Nothing else Just $ "not your turn to move! " <> author
 
     getPlayers :: IndexedMatch -> {black :: UserKey, white :: UserKey}
     getPlayers (IndexedMatch {offerPayload, offerMeta}) =
       assignColors' offerPayload offerMeta
+
+lastMoveKey :: IndexedMatch -> Maybe MessageKey
+lastMoveKey (IndexedMatch {moves}) = (_.key <<< unwrap) <$> last moves
+
+nextMover :: FlumeData -> IndexedMatch -> UserKey
+nextMover db match@(IndexedMatch {offerPayload, offerMeta}) =
+  method2
+  where
+    {author} = offerMeta
+    {terms, myColor, opponentKey} = offerPayload
+    {handicap} = terms
+    firstMover = if (myColor == Black) == (handicap == 0)
+                    then author
+                    else opponentKey
+    method2 = case flip M.lookup db.moves =<< lastMoveKey match of
+                Just (IndexedMove _ _ lastMeta) -> if author == lastMeta.author then opponentKey else author
+                Nothing -> firstMover
 
 mapFn :: MapFn
 mapFn json = if isValidMessage json then json else jsonNull

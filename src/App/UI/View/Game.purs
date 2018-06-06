@@ -3,10 +3,10 @@ module App.UI.View.Game where
 import Prelude
 
 import App.Common (div_)
-import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), assignColors')
+import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), assignColors, assignColors', nextMover)
 import App.IgoMsg (IgoMsg(..), StoneColor(..))
 import App.UI.Action (Action(..))
-import App.UI.Model (EzModel, Model)
+import App.UI.Model (EzModel, Model, userNameFromKey)
 import App.UI.Routes (Route(..))
 import App.UI.View.Components (link, userKeyMarkup)
 import App.UI.View.MakeOffer (offerForm)
@@ -37,14 +37,22 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
       gameState = Tenuki.currentState <$> tenukiGame
       blackCaps = maybe 0 _.blackStonesCaptured gameState
       whiteCaps = maybe 0 _.whiteStonesCaptured gameState
-      blackPlayer = H.div [H.classes ["player", "my-turn"]]
+      {white, black} = assignColors match
+      turnKey = nextMover db match
+      playerClasses key = H.classes
+        if turnKey /= key
+        then ["player"]
+        else if key == whoami
+        then ["player", "my-turn"]
+        else ["player", "their-turn"] 
+      blackPlayer = H.div [playerClasses black]
         [ div_ "turn-notification" [H.text "your turn"]
-        , div_ "name" [H.text "maackle"]
+        , div_ "name" [H.text $ userNameFromKey model black]
         , div_ "caps" [H.text $ "captures: " <> show whiteCaps]
         ]
-      whitePlayer = H.div [H.classes ["player", "my-turn"]]
+      whitePlayer = H.div [playerClasses white]
         [ div_ "turn-notification" [H.text "your turn"]
-        , div_ "name" [H.text "maackle"]
+        , div_ "name" [H.text $ userNameFromKey model white]
         , div_ "caps" [H.text $ "captures: " <> show blackCaps]
         ]
 
