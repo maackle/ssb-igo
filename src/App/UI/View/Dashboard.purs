@@ -2,16 +2,19 @@ module App.UI.View.Dashboard where
 
 import Prelude
 
+import App.Common (div_)
 import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), assignColors')
 import App.IgoMsg (IgoMsg(..), StoneColor(..))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, Model)
+import App.UI.Optics as O
 import App.UI.Routes (Route(..))
 import App.UI.View.Components (link, userKeyMarkup)
 import App.UI.View.MakeOffer (offerForm)
 import Data.Array (filter, intercalate, length, singleton)
 import Data.Array.NonEmpty (replicate)
 import Data.Foldable (find)
+import Data.Lens as Lens
 import Data.Maybe (Maybe(..))
 import Data.StrMap as M
 import Spork.Html (classes)
@@ -21,27 +24,35 @@ class' = classes <<< singleton
 
 dashboard :: Model -> EzModel -> H.Html Action
 dashboard model ez@{db, whoami} =
-  H.div []
+  div_ "container dashboard"
     [ H.section []
-      [ H.h1 [] [H.text "requests"]
-      , myRequest ez
+      [ H.h2 [] [H.text "requests"]
+      , H.lazy myRequest ez
+
       , H.h2 [] [H.text "offers"]
-      , H.table []
+      , H.button
+        [ class' "btn-main", H.onClick $ H.always_ $ UpdateModel (Lens.over O.showOfferForm not) ]
+        [ H.text "Make offer"]
+      , if model.showOfferForm
+        then H.lazy2 offerForm model ez
+        else H.div [] []
+      , H.table [class' ""]
         [ H.thead [] offerHeaders
         , H.tbody [] (map (offerRow model) incomingOffers)
         ]
+
       , H.h2 [] [H.text "my games"]
-      , H.table []
+      , H.table [class' "your-games"]
         [ H.thead [] gameHeaders
         , H.tbody [] (map (gameRow model) myGames)
         ]
-      , H.h2 [] [H.text "open games"]
+
+      , H.h2 [] [H.text "active games"]
       , H.table []
         [ H.thead [] gameHeaders
         , H.tbody [] (map (gameRow model) otherGames)
         ]
       ]
-    , H.lazy2 offerForm model ez
     ]
   where
     incomingOffers :: Array IndexedOffer
@@ -90,8 +101,12 @@ offerRow model (IndexedOffer {terms, myColor} {author, key}) =
     , H.td [] [H.text $ show terms.handicap]
     , H.td [] [H.text $ show terms.komi]
     , H.td []
-      [ H.button [H.onClick handleAccept] [H.text "Accept"]
-      , H.button [H.onClick handleDecline] [H.text "Decline"]
+      [ H.button
+        [H.onClick handleAccept]
+        [H.text "Accept"]
+      , H.button
+        [H.onClick handleDecline]
+        [H.text "Decline"]
       ]
     ]
   where
@@ -122,7 +137,8 @@ gameRow model (IndexedMatch {offerPayload, acceptPayload, moves, offerMeta, acce
     [ H.td [] [userKeyMarkup model black]
     , H.td [] [userKeyMarkup model white]
     , H.td [] [H.text $ show $ length moves]
-    , H.td [] [link (ViewGame acceptMeta.key) H.button [] [H.text "view"]]
+    , H.td []
+      [ link (ViewGame acceptMeta.key) H.button [class' "btn-main"] [H.text "view"]]
     ]
   where
     {black, white} = assignColors' offerPayload offerMeta

@@ -2,8 +2,8 @@ module App.UI.Action where
 
 import Prelude
 
-import App.IgoMsg (IgoMsg(..), OfferMatchPayload, GameTerms)
 import App.Flume (FlumeState(..), IndexedMatch(..), decodeFlumeDb, mapFn, reduceFn)
+import App.IgoMsg (GameTerms, IgoMsg(..), KibitzPayload, OfferMatchPayload)
 import App.UI.Effect (Affect, runEffect)
 import App.UI.Effect as E
 import App.UI.Model (DevIdentity, Model)
@@ -43,6 +43,7 @@ data Action
   | ManageRef String ElementRef
   | ManageTenukiGame IndexedMatch ElementRef
   | SetTenukiGame (Maybe TenukiGame)
+  | SubmitKibitz KibitzPayload
   | UpdateModel (Model -> Model)
   | UpdateField' (String -> Either String (Model -> Model)) String
 
@@ -110,6 +111,11 @@ update model = case _ of
     Removed el ->
       {model, effects: lift $ pure $ SetTenukiGame Nothing }
 
+  SubmitKibitz payload ->
+    { model: model { kibitzDraft = "" }
+    , effects: lift $ runEffect $ publish $ Kibitz payload
+    }
+
   SetTenukiGame game -> purely $ model { tenukiGame = game }
 
   ManageRef key ref -> case ref of
@@ -117,9 +123,7 @@ update model = case _ of
     Removed el -> purely $ model { refs = M.delete key model.refs}
 
   UpdateModel f ->
-    { model: f model
-    , effects: lift $ (traceAnyA (f model) *> pure Noop)
-    }
+    purely $ f model
 
   UpdateField' f val ->
     let

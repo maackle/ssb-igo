@@ -3,7 +3,7 @@ module App.UI.View.Game where
 import Prelude
 
 import App.Common (div_)
-import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), KibitzStep(..), assignColors, assignColors', lastMoveKey, nextMover)
+import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), KibitzStep(..), assignColors, assignColors', lastMoveKey, matchKey, nextMover)
 import App.IgoMsg (IgoMsg(..), StoneColor(..))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, Model, userNameFromKey)
@@ -11,6 +11,7 @@ import App.UI.Optics as O
 import App.UI.Routes (Route(..))
 import App.UI.View.Components (link, userKeyMarkup)
 import App.UI.View.MakeOffer (offerForm)
+import DOM.Event.KeyboardEvent as KeyboardEvent
 import Data.Array (filter, intercalate, length, singleton)
 import Data.Array.NonEmpty (replicate)
 import Data.Foldable (find)
@@ -25,7 +26,7 @@ import Tenuki.Game as Tenuki
 
 viewGame :: Model -> EzModel -> Maybe IndexedMatch -> H.Html Action
 viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
-  Just match@(IndexedMatch {offerPayload, kibitzes}) ->
+  Just match@(IndexedMatch {offerPayload}) ->
     let
       gameDiv = H.div
         [ H.classes ["tenuki-board"]
@@ -61,6 +62,7 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
       passButton = H.button [H.classes ["pass"]] [H.text "pass"]
       resignButton = H.button [H.classes ["resign"]] [H.text "resign"]
 
+      kibitzes = maybe [] id $ M.lookup (matchKey match) db.matchKibitzes
       kibitzPanel = kibitzes <#> \(KibitzStep {text, author}) ->
         div_ "kibitz"
           [ div_ "author" [H.text $ userNameFromKey model author]
@@ -68,8 +70,15 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
           ]
       move = lastMoveKey match
       text = model.kibitzDraft
-      handleKibitzInput = Just <<< UpdateModel <<< (Lens.set O.kibitzDraft)
-      handleKibitzSend = H.always_ $ Publish $ Kibitz {text, move}
+      handleKibitzEnter ev =
+        if KeyboardEvent.code ev == "Enter"
+        then Just $ SubmitKibitz {text, move}
+        else Nothing
+
+      handleKibitzInput =
+        Just <<< UpdateModel <<< (Lens.set O.kibitzDraft)
+      handleKibitzSend =
+        H.always_ $ SubmitKibitz {text, move}
 
     in div_ "game-content"
       [ gameDiv
@@ -90,6 +99,8 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
               [ H.type_ H.InputText
               , H.placeholder "Type to talk..."
               , H.onValueInput handleKibitzInput
+              , H.onKeyPress handleKibitzEnter
+              , H.value model.kibitzDraft
               ]
             , H.button
               [ H.onClick handleKibitzSend ]

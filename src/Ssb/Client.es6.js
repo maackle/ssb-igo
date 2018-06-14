@@ -1,5 +1,5 @@
 const ssbClient = require('ssb-client')
-const {exposeAff, exposeEff, exposePure} = require('../Ssb.Common/foreign')
+const {exposeAff, exposeEff, exposePure} = require('../../output/Ssb.Common/foreign')
 
 
 exports.props = exposePure(0, null)

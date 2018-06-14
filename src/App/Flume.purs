@@ -36,6 +36,7 @@ type FlumeData =
   , requests :: StrMap IndexedRequest
   , matches :: StrMap IndexedMatch
   , moves :: StrMap IndexedMove
+  , matchKibitzes :: StrMap (Array KibitzStep)
   }
 
 data FlumeState
@@ -50,6 +51,7 @@ initialDb =
   , requests: M.empty
   , matches: M.empty
   , moves: M.empty
+  , matchKibitzes: M.empty
   }
 
 
@@ -62,7 +64,6 @@ newtype IndexedMatch = IndexedMatch
   { acceptPayload :: AcceptMatchPayload
   , offerPayload :: OfferMatchPayload
   , moves :: Array MoveStep
-  , kibitzes :: Array KibitzStep
   , acceptMeta :: {author :: UserKey, key :: MsgKey}
   , offerMeta :: {author :: UserKey, key :: MsgKey}
   }
@@ -101,7 +102,8 @@ decodeFlumeDb json = do
   declines <- M.lookup "declines" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
   matches <- M.lookup "matches" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
   moves <- M.lookup "moves" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
-  pure $ { offers, requests, declines, matches, moves }
+  matchKibitzes <- M.lookup "matchKibitzes" o >>= toObject >>= (map (decodeJson >>> hush) >>> sequence)
+  pure $ { offers, requests, declines, matches, moves, matchKibitzes }
 
 maybeToFlumeState :: String -> Maybe FlumeData -> FlumeState
 maybeToFlumeState err = maybe (FlumeFailure err) FlumeDb
@@ -114,6 +116,7 @@ encodeFlumeDb db =
     , "declines" & (fromObject $ map encodeJson db.declines)
     , "matches" & (fromObject $ map encodeJson db.matches)
     , "moves" & (fromObject $ map encodeJson db.moves)
+    , "matchKibitzes" & (fromObject $ map encodeJson db.matchKibitzes)
     ]
 
 type ReduceFn = FlumeData -> Json -> FlumeData
@@ -172,7 +175,6 @@ reduceFn (db) json =
                             { acceptPayload
                             , offerPayload
                             , moves: []
-                            , kibitzes: []
                             , acceptMeta: {author: acceptMeta.author, key: acceptMeta.key}
                             , offerMeta: {author: offerMeta.author, key: offerMeta.key}
                             }
@@ -224,8 +226,8 @@ reduceFn (db) json =
         Just match@(IndexedMatch {acceptMeta}) ->
           let
             newKibitz = KibitzStep {text, author}
-            newMatch = match # unwrap >>> (\m -> m { kibitzes = snoc m.kibitzes newKibitz}) >>> wrap
-          in db { matches = M.insert acceptMeta.key newMatch db.matches }
+            append arr = Just $ snoc arr newKibitz
+          in db { matchKibitzes = M.update append acceptMeta.key db.matchKibitzes }
 
   where
 
@@ -261,6 +263,9 @@ reduceFn (db) json =
     getPlayers :: IndexedMatch -> {black :: UserKey, white :: UserKey}
     getPlayers (IndexedMatch {offerPayload, offerMeta}) =
       assignColors' offerPayload offerMeta
+
+matchKey :: IndexedMatch -> MessageKey
+matchKey (IndexedMatch {acceptMeta}) = acceptMeta.key
 
 lastMoveKey :: IndexedMatch -> MessageKey
 lastMoveKey (IndexedMatch {moves, acceptMeta}) =

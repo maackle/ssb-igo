@@ -25,6 +25,27 @@ type Model =
   , route :: Route
   , tenukiGame :: Maybe TenukiGame
   , kibitzDraft :: String
+  , showOfferForm :: Boolean
+  }
+
+initialModel :: Model
+initialModel =
+  { flume: FlumeUnloaded
+  , whoami: Nothing
+  , devIdentity: Just Alice
+  , userKeys: M.empty
+  , userNames: M.empty
+  , scratchOffer:
+    { terms: defaultTerms
+    , myColor: Black
+    , opponent: Left ""
+    , errorMsg: Nothing
+    }
+  , refs: M.empty
+  , route: Dashboard
+  , tenukiGame: Nothing
+  , kibitzDraft: ""
+  , showOfferForm: false
   }
 
 data DevIdentity
@@ -76,23 +97,3 @@ userNameFromKey {userKeys} key' =
   case M.lookup key' userKeys of
     Just {key, name} -> maybe key id name
     Nothing -> key'
-
-
-initialModel :: Model
-initialModel =
-  { flume: FlumeUnloaded
-  , whoami: Nothing
-  , devIdentity: Just Alice
-  , userKeys: M.empty
-  , userNames: M.empty
-  , scratchOffer:
-    { terms: defaultTerms
-    , myColor: Black
-    , opponent: Left ""
-    , errorMsg: Nothing
-    }
-  , refs: M.empty
-  , route: Dashboard
-  , tenukiGame: Nothing
-  , kibitzDraft: ""
-  }

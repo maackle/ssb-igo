@@ -2,7 +2,7 @@
 
 var scuttlebot = require('scuttlebot');
 
-var _require = require('../Ssb.Common/foreign');
+var _require = require('../../output/Ssb.Common/foreign');
 
 var exposeAff = _require.exposeAff;
 var exposeEff = _require.exposeEff;
