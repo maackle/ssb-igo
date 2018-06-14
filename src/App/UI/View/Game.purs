@@ -72,13 +72,13 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
       text = model.kibitzDraft
       handleKibitzEnter ev =
         if KeyboardEvent.code ev == "Enter"
-        then Just $ SubmitKibitz {text, move}
+        then Just $ SubmitKibitz move
         else Nothing
 
       handleKibitzInput =
         Just <<< UpdateModel <<< (Lens.set O.kibitzDraft)
       handleKibitzSend =
-        H.always_ $ SubmitKibitz {text, move}
+        H.always_ $ SubmitKibitz move
 
     in div_ "game-content"
       [ gameDiv
@@ -98,9 +98,9 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
             [ H.input
               [ H.type_ H.InputText
               , H.placeholder "Type to talk..."
-              , H.onValueInput handleKibitzInput
+              -- , H.onValueInput handleKibitzInput
               , H.onKeyPress handleKibitzEnter
-              , H.value model.kibitzDraft
+              , H.ref $ Just <<< ManageRef "kibitzInput"
               ]
             , H.button
               [ H.onClick handleKibitzSend ]

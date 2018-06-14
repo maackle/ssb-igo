@@ -4,7 +4,7 @@ import Prelude
 
 import App.Flume (FlumeState(..), IndexedMatch(..), decodeFlumeDb, mapFn, reduceFn)
 import App.IgoMsg (GameTerms, IgoMsg(..), KibitzPayload, OfferMatchPayload)
-import App.UI.Effect (Affect, runEffect)
+import App.UI.Effect (Affect, Effect, runEffect)
 import App.UI.Effect as E
 import App.UI.Model (DevIdentity, Model)
 import App.UI.Optics (ModelLens)
@@ -12,6 +12,12 @@ import App.UI.Optics as O
 import App.UI.Routes (Route(..))
 import Control.Monad.Aff.Console as Aff
 import Control.Monad.Eff.Class (liftEff)
+import DOM (DOM)
+import DOM.Classy.Element (fromElement)
+import DOM.Classy.HTMLElement (fromHTMLElement)
+import DOM.Classy.Node (nodeValue)
+import DOM.HTML.HTMLInputElement (setValue, value)
+import DOM.Node.Types (Element)
 import Data.Argonaut (Json, decodeJson, jsonNull)
 import Data.Array (last)
 import Data.Either (Either(Right, Left))
@@ -25,7 +31,7 @@ import Spork.App (lift, purely)
 import Spork.App as App
 import Spork.Html (ElementRef)
 import Ssb.MessageTypes (AboutMessage(..))
-import Ssb.Types (UserKey)
+import Ssb.Types (UserKey, MessageKey)
 import Tenuki.Game (TenukiGame, setGameState)
 import Tenuki.Game as Tenuki
 
@@ -43,7 +49,7 @@ data Action
   | ManageRef String ElementRef
   | ManageTenukiGame IndexedMatch ElementRef
   | SetTenukiGame (Maybe TenukiGame)
-  | SubmitKibitz KibitzPayload
+  | SubmitKibitz MessageKey
   | UpdateModel (Model -> Model)
   | UpdateField' (String -> Either String (Model -> Model)) String
 
@@ -111,10 +117,26 @@ update model = case _ of
     Removed el ->
       {model, effects: lift $ pure $ SetTenukiGame Nothing }
 
-  SubmitKibitz payload ->
-    { model: model { kibitzDraft = "" }
-    , effects: lift $ runEffect $ publish $ Kibitz payload
-    }
+  SubmitKibitz move -> maybe (purely model) id $ do
+    el <- fromElement =<< M.lookup "kibitzInput" model.refs
+    let pub = do
+          text :: String <- liftEff $ value el
+          liftEff $ setValue "" el
+          runEffect $ publish $ Kibitz {move, text}
+    pure { model: model { kibitzDraft = "" }
+          , effects: lift pub
+          }
+  -- case M.lookup "kibitzInput" model.refs of
+  --   Nothing -> purely model
+  --   Just (el :: Element) ->
+  --     let
+  --       pub = do
+  --         text :: String <- liftEff $  el
+  --         runEffect $ publish $ Kibitz {move, text}
+  --     in
+  --       { model: model { kibitzDraft = "" }
+  --       , effects: lift pub
+  --       }
 
   SetTenukiGame game -> purely $ model { tenukiGame = game }
 

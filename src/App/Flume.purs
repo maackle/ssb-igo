@@ -4,7 +4,7 @@ import Prelude
 
 import App.Common (messageTypeString)
 import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, DeclineMatchFields, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseIgoMessage)
-import App.Utils (trace', (&))
+import App.Utils (trace', upsert, (&))
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, fromObject, jsonNull, toObject, toString)
 import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
@@ -225,9 +225,9 @@ reduceFn (db) json =
           unsafePartial $ crashWith "Kibitz: invalid message chain"
         Just match@(IndexedMatch {acceptMeta}) ->
           let
-            newKibitz = KibitzStep {text, author}
+            newKibitz = spy $ KibitzStep {text, author}
             append arr = Just $ snoc arr newKibitz
-          in db { matchKibitzes = M.update append acceptMeta.key db.matchKibitzes }
+          in db { matchKibitzes = upsert append acceptMeta.key [] db.matchKibitzes }
 
   where
 

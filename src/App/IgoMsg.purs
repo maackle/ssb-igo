@@ -13,8 +13,9 @@ import Data.Generic (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.StrMap as M
+import Debug.Trace (traceAny)
 import Partial (crashWith)
-import Partial.Unsafe (unsafePartial)
+import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 import Ssb.Client (publish)
 import Ssb.Config (SSB)
 import Ssb.MessageTypes (SsbMessage, parsePayload)
@@ -81,7 +82,9 @@ publishMsg client msg = do
 publishMsg' :: ∀ eff. SbotConn -> IgoMsg -> SA eff SsbIgoMsg
 publishMsg' client msg = do
   msg <- publish client $ toJson msg
-  pure $ unsafePartial $ fromRight $ parseIgoMessage msg
+  case parseIgoMessage msg of
+    Right m -> pure m
+    Left err -> traceAny msg $ const $ unsafeCrashWith $ "can't parse: " <> err
 
 -- publishPrivateMsg :: ∀ eff. IgoMsg -> Array UserKey -> SA eff Unit
 -- publishPrivateMsg msg recips = do

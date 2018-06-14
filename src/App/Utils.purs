@@ -10,11 +10,13 @@ import Data.DateTime (Date, DateTime(DateTime), Time(Time))
 import Data.Either (Either(Right, Left))
 import Data.Enum (fromEnum)
 import Data.Int (decimal, toStringAs)
+import Data.Map as Map
 import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.StrMap (StrMap, lookup)
+import Data.StrMap as M
 import Data.Tuple (Tuple(..))
-import Debug.Trace (class DebugWarning, trace)
+import Debug.Trace (class DebugWarning, spy, trace)
 
 map_ :: forall m a b. Functor m => m b -> (b -> a) -> m a
 map_ = flip map
@@ -72,6 +74,20 @@ toObject' = maybeToEither "not an object" <<< toObject
 unupdate :: ∀ f a. Newtype f a => (a -> a) -> (f -> f)
 unupdate update =
   wrap <<< update <<< unwrap
+
+upsert :: ∀ v. (v -> Maybe v) -> String -> v -> StrMap v -> StrMap v
+upsert f k v m =
+  let m' = case M.lookup k m of
+            Nothing -> M.insert k v m
+            Just _ -> m
+  in M.update f k m'
+
+upsert' :: ∀ k v. Ord k => (v -> Maybe v) -> k -> v -> Map.Map k v -> Map.Map k v
+upsert' f k v m =
+  let m' = case Map.lookup k m of
+            Nothing -> Map.insert k v m
+            Just _ -> m
+  in Map.update f k m'
 
 trace' :: ∀ a. DebugWarning => String -> a -> a
 trace' m = trace m <<< const
