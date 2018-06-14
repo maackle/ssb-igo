@@ -3,16 +3,18 @@ module App.UI.View.Game where
 import Prelude
 
 import App.Common (div_)
-import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), assignColors, assignColors', nextMover)
+import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), KibitzStep(..), assignColors, assignColors', lastMoveKey, nextMover)
 import App.IgoMsg (IgoMsg(..), StoneColor(..))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, Model, userNameFromKey)
+import App.UI.Optics as O
 import App.UI.Routes (Route(..))
 import App.UI.View.Components (link, userKeyMarkup)
 import App.UI.View.MakeOffer (offerForm)
 import Data.Array (filter, intercalate, length, singleton)
 import Data.Array.NonEmpty (replicate)
 import Data.Foldable (find)
+import Data.Lens as Lens
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as M
 import Debug.Trace (spy, trace, traceAny)
@@ -23,7 +25,7 @@ import Tenuki.Game as Tenuki
 
 viewGame :: Model -> EzModel -> Maybe IndexedMatch -> H.Html Action
 viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
-  Just match@(IndexedMatch {offerPayload}) ->
+  Just match@(IndexedMatch {offerPayload, kibitzes}) ->
     let
       gameDiv = H.div
         [ H.classes ["tenuki-board"]
@@ -44,7 +46,7 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
         then ["player"]
         else if key == whoami
         then ["player", "my-turn"]
-        else ["player", "their-turn"] 
+        else ["player", "their-turn"]
       blackPlayer = H.div [playerClasses black]
         [ div_ "turn-notification" [H.text "your turn"]
         , div_ "name" [H.text $ userNameFromKey model black]
@@ -59,12 +61,15 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
       passButton = H.button [H.classes ["pass"]] [H.text "pass"]
       resignButton = H.button [H.classes ["resign"]] [H.text "resign"]
 
-      kibitzes =
-        [ div_ "kibitz"
-          [ div_ "author" [H.text "mijkl"]
-          , div_ "message" [H.text "hey what's up"]
+      kibitzPanel = kibitzes <#> \(KibitzStep {text, author}) ->
+        div_ "kibitz"
+          [ div_ "author" [H.text $ userNameFromKey model author]
+          , div_ "message" [H.text text]
           ]
-        ]
+      move = lastMoveKey match
+      text = model.kibitzDraft
+      handleKibitzInput = Just <<< UpdateModel <<< (Lens.set O.kibitzDraft)
+      handleKibitzSend = H.always_ $ Publish $ Kibitz {text, move}
 
     in div_ "game-content"
       [ gameDiv
@@ -79,10 +84,16 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
           , datum "hand." "2"
           ]
         , div_ "kibitz-container"
-          [ div_ "kibitzes" kibitzes
+          [ div_ "kibitzes" kibitzPanel
           , div_ "kibitz-input"
-            [ H.input [H.type_ H.InputText, H.placeholder "Type to talk..."]
-            , H.button [] [H.text "Chat"]
+            [ H.input
+              [ H.type_ H.InputText
+              , H.placeholder "Type to talk..."
+              , H.onValueInput handleKibitzInput
+              ]
+            , H.button
+              [ H.onClick handleKibitzSend ]
+              [ H.text "Chat" ]
             ]
           ]
       ]

@@ -24,6 +24,7 @@ type Model =
   , refs :: StrMap Element
   , route :: Route
   , tenukiGame :: Maybe TenukiGame
+  , kibitzDraft :: String
   }
 
 data DevIdentity
@@ -93,4 +94,5 @@ initialModel =
   , refs: M.empty
   , route: Dashboard
   , tenukiGame: Nothing
+  , kibitzDraft: ""
   }

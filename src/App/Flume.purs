@@ -61,23 +61,24 @@ data IndexedMove = IndexedMove PlayMovePayload {rootAccept :: MsgKey} {author ::
 newtype IndexedMatch = IndexedMatch
   { acceptPayload :: AcceptMatchPayload
   , offerPayload :: OfferMatchPayload
-  , moves :: (Array MoveStep)
+  , moves :: Array MoveStep
+  , kibitzes :: Array KibitzStep
   , acceptMeta :: {author :: UserKey, key :: MsgKey}
   , offerMeta :: {author :: UserKey, key :: MsgKey}
   }
 derive instance newtypeIndexedMatch :: Newtype IndexedMatch _
-
-newtype MoveStep = MoveStep {move :: IgoMove, key :: MsgKey}
-type OpponentKey = UserKey
-
 derive instance genericIndexedOffer :: Generic IndexedOffer
 derive instance genericIndexedDecline :: Generic IndexedDecline
 derive instance genericIndexedRequest :: Generic IndexedRequest
 derive instance genericIndexedMatch :: Generic IndexedMatch
 derive instance genericIndexedMove :: Generic IndexedMove
-derive instance genericMoveStep :: Generic MoveStep
 
+newtype MoveStep = MoveStep {move :: IgoMove, key :: MsgKey}
+newtype KibitzStep = KibitzStep {text :: String, author :: UserKey}
 derive instance newtypeMoveStep :: Newtype MoveStep _
+derive instance genericMoveStep :: Generic MoveStep
+derive instance genericKibitzStep :: Generic KibitzStep
+
 
 instance showIndexedOffer :: Show IndexedOffer where show = gShow
 instance showIndexedDecline :: Show IndexedDecline where show = gShow
@@ -171,6 +172,7 @@ reduceFn (db) json =
                             { acceptPayload
                             , offerPayload
                             , moves: []
+                            , kibitzes: []
                             , acceptMeta: {author: acceptMeta.author, key: acceptMeta.key}
                             , offerMeta: {author: offerMeta.author, key: offerMeta.key}
                             }
@@ -198,16 +200,9 @@ reduceFn (db) json =
             else db
 
     Tuple (PlayMove payload@{move, lastMove}) {author, key} ->
-      let maybeMatch =
-            case M.lookup lastMove db.moves, M.lookup lastMove db.matches of
-              Nothing, Just match ->
-                Just match
-              Just (IndexedMove _ {rootAccept} _), Nothing ->
-                M.lookup rootAccept db.matches
-              _, _ -> Nothing  -- NB: also handles case of Just, Just, which is absurd
-      in case maybeMatch of
+      case rootMatch lastMove of
         Nothing ->
-          trace ("invalid message chain") $ const db
+          unsafePartial $ crashWith "invalid message chain"
         Just match@(IndexedMatch {acceptMeta}) ->
           let rootAccept = acceptMeta.key
               moveError = validateMove match payload author
@@ -222,14 +217,28 @@ reduceFn (db) json =
             Just err ->
               trace ("move validation error: " <> err) $ const db
 
-
-    Tuple (Kibitz payload) _ ->
-      trace' "TODO" db
+    Tuple (Kibitz payload@{move, text}) {author} ->
+      case rootMatch move of
+        Nothing ->
+          unsafePartial $ crashWith "Kibitz: invalid message chain"
+        Just match@(IndexedMatch {acceptMeta}) ->
+          let
+            newKibitz = KibitzStep {text, author}
+            newMatch = match # unwrap >>> (\m -> m { kibitzes = snoc m.kibitzes newKibitz}) >>> wrap
+          in db { matches = M.insert acceptMeta.key newMatch db.matches }
 
   where
 
     msg = parseIgoMessage json # lmap \err -> trace ("bad message: " <> err <> ". json = " <> show json)
     reduceRight f = either (const db) (f <<< \m -> Tuple m.content m) msg
+
+    rootMatch lastMove =
+      case M.lookup lastMove db.moves, M.lookup lastMove db.matches of
+        Nothing, Just match ->
+          Just match
+        Just (IndexedMove _ {rootAccept} _), Nothing ->
+          M.lookup rootAccept db.matches
+        _, _ -> Nothing  -- NB: also handles case of Just, Just, which is absurd
 
     validateMove :: IndexedMatch -> PlayMovePayload -> UserKey -> Maybe String
     validateMove match@(IndexedMatch {offerPayload, offerMeta, moves}) {move, lastMove} author =
@@ -238,12 +247,13 @@ reduceFn (db) json =
         {terms, myColor} = offerPayload
         {handicap} = terms
         {black, white} = getPlayers match
-        validateLastMove = lastMoveKey match >>= \key ->
-          if spy key == spy lastMove
+        lastKey = lastMoveKey match
+        validateLastMove =
+          if lastKey == lastMove
           then Nothing
           else Just $ "move is not in response to last valid move! "
                    <> author <> " || "
-                   <> key
+                   <> lastKey
         validatePlayer = case move of
           Resign -> Nothing
           _ -> if author == nextMover db match then Nothing else Just $ "not your turn to move! " <> author
@@ -252,8 +262,9 @@ reduceFn (db) json =
     getPlayers (IndexedMatch {offerPayload, offerMeta}) =
       assignColors' offerPayload offerMeta
 
-lastMoveKey :: IndexedMatch -> Maybe MessageKey
-lastMoveKey (IndexedMatch {moves}) = (_.key <<< unwrap) <$> last moves
+lastMoveKey :: IndexedMatch -> MessageKey
+lastMoveKey (IndexedMatch {moves, acceptMeta}) =
+  maybe acceptMeta.key (_.key <<< unwrap) (last moves)
 
 nextMover :: FlumeData -> IndexedMatch -> UserKey
 nextMover db match@(IndexedMatch {offerPayload, offerMeta}) =
@@ -265,7 +276,7 @@ nextMover db match@(IndexedMatch {offerPayload, offerMeta}) =
     firstMover = if (myColor == Black) == (handicap == 0)
                     then author
                     else opponentKey
-    method2 = case flip M.lookup db.moves =<< lastMoveKey match of
+    method2 = case M.lookup (lastMoveKey match) db.moves of
                 Just (IndexedMove _ _ lastMeta) -> if author == lastMeta.author then opponentKey else author
                 Nothing -> firstMover
 
