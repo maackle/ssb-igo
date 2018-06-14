@@ -30,10 +30,15 @@ dashboard model ez@{db, whoami} =
         [ H.thead [] offerHeaders
         , H.tbody [] (map (offerRow model) incomingOffers)
         ]
-      , H.h2 [] [H.text "games"]
+      , H.h2 [] [H.text "my games"]
       , H.table []
         [ H.thead [] gameHeaders
-        , H.tbody [] (map (myGameRow model) myGames)
+        , H.tbody [] (map (gameRow model) myGames)
+        ]
+      , H.h2 [] [H.text "open games"]
+      , H.table []
+        [ H.thead [] gameHeaders
+        , H.tbody [] (map (gameRow model) otherGames)
         ]
       ]
     , H.lazy2 offerForm model ez
@@ -47,6 +52,11 @@ dashboard model ez@{db, whoami} =
     myGames = M.values db.matches
       # filter \(IndexedMatch {acceptMeta, offerMeta}) ->
         acceptMeta.author == whoami || offerMeta.author == whoami
+
+    otherGames :: Array IndexedMatch
+    otherGames = M.values db.matches
+      # filter \(IndexedMatch {acceptMeta, offerMeta}) ->
+        not $ (acceptMeta.author == whoami || offerMeta.author == whoami)
 
 
 myRequest :: EzModel -> H.Html Action
@@ -106,8 +116,8 @@ gameHeaders =
   ]
 
 
-myGameRow :: Model -> IndexedMatch -> (H.Html Action)
-myGameRow model (IndexedMatch {offerPayload, acceptPayload, moves, offerMeta, acceptMeta}) =
+gameRow :: Model -> IndexedMatch -> (H.Html Action)
+gameRow model (IndexedMatch {offerPayload, acceptPayload, moves, offerMeta, acceptMeta}) =
   H.tr []
     [ H.td [] [userKeyMarkup model black]
     , H.td [] [userKeyMarkup model white]
