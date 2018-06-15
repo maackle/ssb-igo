@@ -138,6 +138,15 @@ assignColors' {myColor, opponentKey} {author} =
     Black -> { black: author, white: opponentKey}
     White -> { white: author, black: opponentKey}
 
+myColor :: IndexedMatch -> UserKey -> Maybe StoneColor
+myColor match whoami =
+  if whoami == black
+  then Just Black
+  else if whoami == white
+  then Just White
+  else Nothing
+  where {black, white} = assignColors match
+
 addUserKey :: ∀ a. String -> DeclineMatchPayload -> {userKey :: String | DeclineMatchFields}
 addUserKey = Record.insert (SProxy :: SProxy "userKey")
 

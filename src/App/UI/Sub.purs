@@ -30,7 +30,7 @@ import Tenuki.Game (TenukiGame, setMoveCallback)
 
 data Sub a
   = IdentityFeeds (Maybe DevIdentity) (SubCallbacks a)
-  | MoveListener TenukiGame (BoardPositionData -> a)
+  -- | MoveListener TenukiGame (BoardPositionData -> a)
 derive instance functorSub :: Functor Sub
 
 type SubCallbacks a = {igoCb :: (Json -> a), friendsCb :: (Json -> a)}
@@ -118,13 +118,13 @@ interpreter = Interpreter $ EventQueue.withAccum spec where
                   pure m {sbotFibers = Just fibers, devIdentity = devIdentity}
                 else
                   pure m
-        MoveListener game cb -> do
-          maybe
-            (pure unit)
-            (flip setMoveCallback \_ -> pure unit)
-            m.tenukiGame
-          setMoveCallback game \pos -> do
-            let action = cb pos
-            queue.push action
-            queue.run
-          pure m { tenukiGame = Just game }
+        -- MoveListener game cb -> do
+        --   maybe
+        --     (pure unit)
+        --     (flip setMoveCallback \_ -> pure unit)
+        --     m.tenukiGame
+        --   setMoveCallback game \pos -> do
+        --     let action = cb pos
+        --     queue.push action
+        --     queue.run
+        --   pure m { tenukiGame = Just game }

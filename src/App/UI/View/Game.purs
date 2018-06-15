@@ -25,7 +25,7 @@ import Tenuki.Game as Tenuki
 
 
 viewGame :: Model -> EzModel -> Maybe IndexedMatch -> H.Html Action
-viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
+viewGame model@{tenukiClient} ez@{db, whoami} maybeMatch = case maybeMatch of
   Just match@(IndexedMatch {offerPayload}) ->
     let
       gameDiv = H.div
@@ -37,7 +37,7 @@ viewGame model@{tenukiGame} ez@{db, whoami} maybeMatch = case maybeMatch of
           [ div_ "key" [H.text k]
           , div_ "val" [H.text v]
           ]
-      gameState = Tenuki.currentState <$> tenukiGame
+      gameState = (Tenuki.currentState <<< Tenuki.getGame) <$> tenukiClient
       blackCaps = maybe 0 _.blackStonesCaptured gameState
       whiteCaps = maybe 0 _.whiteStonesCaptured gameState
       {white, black} = assignColors match

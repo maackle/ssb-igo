@@ -2,8 +2,8 @@ module App.UI.Model where
 
 import Prelude
 
-import App.IgoMsg (GameTerms, OfferMatchPayload, StoneColor(Black), defaultTerms)
 import App.Flume (FlumeData, FlumeState(..))
+import App.IgoMsg (GameTerms, OfferMatchPayload, StoneColor(Black), defaultTerms)
 import App.UI.Routes (Route(..))
 import DOM.Node.Types (Element)
 import Data.Either (Either(..))
@@ -12,7 +12,7 @@ import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap (StrMap)
 import Data.StrMap as M
 import Ssb.Types (UserKey)
-import Tenuki.Game (TenukiGame)
+import Tenuki.Game (TenukiClient, TenukiGame)
 
 type Model =
   { flume :: FlumeState
@@ -23,7 +23,7 @@ type Model =
   , scratchOffer :: ScratchOffer
   , refs :: StrMap Element
   , route :: Route
-  , tenukiGame :: Maybe TenukiGame
+  , tenukiClient :: Maybe TenukiClient
   , kibitzDraft :: String
   , showOfferForm :: Boolean
   }
@@ -43,7 +43,7 @@ initialModel =
     }
   , refs: M.empty
   , route: Dashboard
-  , tenukiGame: Nothing
+  , tenukiClient: Nothing
   , kibitzDraft: ""
   , showOfferForm: false
   }

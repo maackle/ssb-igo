@@ -2,16 +2,21 @@ module App.UI.Action where
 
 import Prelude
 
-import App.Flume (FlumeState(..), IndexedMatch(..), decodeFlumeDb, mapFn, reduceFn)
-import App.IgoMsg (GameTerms, IgoMsg(..), KibitzPayload, OfferMatchPayload)
+import App.Common (getClient')
+import App.Flume (FlumeState(..), IndexedMatch(..), decodeFlumeDb, lastMoveKey, mapFn, myColor, reduceFn)
+import App.IgoMsg (BoardPosition(..), GameTerms, IgoMove(..), IgoMsg(..), KibitzPayload, OfferMatchPayload)
+import App.IgoMsg as Msg
+import App.UI.ClientQueries (devClient)
 import App.UI.Effect (Affect, Effect, runEffect)
 import App.UI.Effect as E
-import App.UI.Model (DevIdentity, Model)
+import App.UI.Model (DevIdentity, Model, ezify)
 import App.UI.Optics (ModelLens)
 import App.UI.Optics as O
 import App.UI.Routes (Route(..))
+import Control.Monad.Aff (launchAff_)
 import Control.Monad.Aff.Console as Aff
 import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Console as Eff
 import DOM (DOM)
 import DOM.Classy.Element (fromElement)
 import DOM.Classy.HTMLElement (fromHTMLElement)
@@ -23,7 +28,7 @@ import Data.Array (last)
 import Data.Either (Either(Right, Left))
 import Data.Lens (set)
 import Data.Maybe (Maybe(..), maybe)
-import Data.Newtype (unwrap)
+import Data.Newtype (unwrap, wrap)
 import Data.StrMap as M
 import Debug.Trace (spy, traceA, traceAnyA)
 import Halogen.VDom.DOM.Prop (ElemRef(..))
@@ -32,8 +37,9 @@ import Spork.App as App
 import Spork.Html (ElementRef)
 import Ssb.MessageTypes (AboutMessage(..))
 import Ssb.Types (UserKey, MessageKey)
-import Tenuki.Game (TenukiGame, setGameState)
+import Tenuki.Game (TenukiClient, setGameState)
 import Tenuki.Game as Tenuki
+
 
 data Action
   = Noop
@@ -48,12 +54,40 @@ data Action
 
   | ManageRef String ElementRef
   | ManageTenukiGame IndexedMatch ElementRef
-  | SetTenukiGame (Maybe TenukiGame)
+  | SetTenukiClient (Maybe TenukiClient)
   | SubmitKibitz MessageKey
   | UpdateModel (Model -> Model)
   | UpdateField' (String -> Either String (Model -> Model)) String
 
   | HandlePlayerAutocomplete (ModelLens String) String
+
+
+
+
+publishFrom :: ∀ e. Maybe DevIdentity -> IgoMsg -> Msg.SA e Unit
+publishFrom ident msg = do
+  sbot <- maybe getClient' devClient ident
+  Msg.publishMsg sbot msg
+
+dispatchBoardMove :: ∀ e. Model -> BoardPosition -> Msg.SA e Unit
+dispatchBoardMove model pos =
+  case model.route, ezify model of
+    ViewGame key, Just ez ->
+      case M.lookup key ez.db.matches of
+        Nothing ->
+          pure unit
+        Just match ->
+          let lastMove = lastMoveKey match
+              msg = Msg.PlayMove
+                      { lastMove
+                      , move: PlayStone pos
+                      , subjectiveMoveNum: -1
+                      }
+          in publishFrom model.devIdentity msg
+    _, _ -> pure unit
+  where
+    pub msg = E.runEffect $ E.Publish model.devIdentity msg Noop
+
 
 
 update ∷ ∀ eff. Model -> Action -> App.Transition (Affect eff) Model Action
@@ -106,16 +140,22 @@ update model = case _ of
     , effects: lift $ runEffect (E.GetIdentity (Just ident) UpdateIdentity)
     }
 
-  ManageTenukiGame (IndexedMatch {offerPayload, moves}) ref -> case ref of
+  ManageTenukiGame match@(IndexedMatch {offerPayload, moves}) ref -> case ref of
     Created el ->
-      let effects = lift $ liftEff $ SetTenukiGame <$> Just <$> do
-            game <- Tenuki.createGame el offerPayload.terms
+      let
+        color = myColor match =<< model.whoami
+        callbacks =
+          { submitPlay: launchAff_ <<< dispatchBoardMove model <<< wrap
+          , submitMarkDeadAt: const $ pure unit
+          }
+        effects = lift $ liftEff $ SetTenukiClient <$> Just <$> do
+            client <- Tenuki.createClient el offerPayload.terms color callbacks
             let steps = moves <#> (_.move <<< unwrap)
-            setGameState game steps
-            pure game
+            setGameState (Tenuki.getGame client) steps
+            pure client
       in {model, effects}
     Removed el ->
-      {model, effects: lift $ pure $ SetTenukiGame Nothing }
+      {model, effects: lift $ pure $ SetTenukiClient Nothing }
 
   SubmitKibitz move -> maybe (purely model) id $ do
     el <- fromElement =<< M.lookup "kibitzInput" model.refs
@@ -138,7 +178,7 @@ update model = case _ of
   --       , effects: lift pub
   --       }
 
-  SetTenukiGame game -> purely $ model { tenukiGame = game }
+  SetTenukiClient client -> purely $ model { tenukiClient = client }
 
   ManageRef key ref -> case ref of
     Created el -> purely $ model { refs = M.insert key el model.refs}

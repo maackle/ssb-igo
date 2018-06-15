@@ -7,21 +7,17 @@ import App.IgoMsg as Msg
 import App.UI.ClientQueries (devClient)
 import App.UI.Model (DevIdentity)
 import Control.Monad.Aff (Aff)
-import Control.Monad.Aff.Class (liftAff)
 import Control.Monad.Aff.Console (CONSOLE, log)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console as Eff
-import Control.Monad.Trans.Class (lift)
 import DOM (DOM)
 import DOM.Classy.Event (currentTarget)
 import DOM.Classy.Node (nodeValue)
 import DOM.Event.Event (Event)
-import Data.Argonaut (Json)
-import Data.Maybe (Maybe(..), maybe)
-import Debug.Trace (traceAnyA)
+import Data.Maybe (Maybe, maybe)
 import Ssb.Client (whoami)
 import Ssb.Config (SSB)
-import Ssb.Types (UserKey, SbotConn)
+import Ssb.Types (SbotConn)
 
 type AffSbot fx = (Aff (ssb :: SSB | fx) SbotConn)
 
