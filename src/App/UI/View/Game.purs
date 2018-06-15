@@ -3,7 +3,7 @@ module App.UI.View.Game where
 import Prelude
 
 import App.Common (div_)
-import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), KibitzStep(..), assignColors, assignColors', lastMoveKey, matchKey, nextMover)
+import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), KibitzStep(..), assignColors, assignColors', lastMoveKey, matchKey, myColor, nextMover)
 import App.IgoMsg (IgoMsg(..), StoneColor(..))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, Model, userNameFromKey)
@@ -59,8 +59,12 @@ viewGame model@{tenukiClient} ez@{db, whoami} maybeMatch = case maybeMatch of
         , div_ "caps" [H.text $ "captures: " <> show blackCaps]
         ]
 
-      passButton = H.button [H.classes ["pass"]] [H.text "pass"]
-      resignButton = H.button [H.classes ["resign"]] [H.text "resign"]
+      passButton active = H.button
+        [H.classes ["pass"], H.disabled (not active)]
+        [H.text "pass"]
+      resignButton active = H.button
+        [H.classes ["resign"], H.disabled (not active)]
+        [H.text "resign"]
 
       kibitzes = maybe [] id $ M.lookup (matchKey match) db.matchKibitzes
       kibitzPanel = kibitzes <#> \(KibitzStep {text, author}) ->
@@ -80,18 +84,25 @@ viewGame model@{tenukiClient} ez@{db, whoami} maybeMatch = case maybeMatch of
       handleKibitzSend =
         H.always_ $ SubmitKibitz move
 
+      controls = div_ "controls"
+        let active = nextMover db match == whoami
+        in [ passButton active, resignButton active ]
+
+      info =
+        [ datum "move" "101"
+        , datum "komi" "0.5"
+        , datum "hand." "2"
+        ]
+
     in div_ "game-content"
       [ gameDiv
       , div_ "panel"
         [ div_ "players"
           [ blackPlayer, whitePlayer]
-        , div_ "game-info"
-          [ div_ "controls"
-            [ passButton, resignButton]
-          , datum "move" "101"
-          , datum "komi" "0.5"
-          , datum "hand." "2"
-          ]
+        , div_ "game-info" $
+            case myColor match whoami of
+              Just _ -> [controls] <> info
+              Nothing -> info
         , div_ "kibitz-container"
           [ div_ "kibitzes" kibitzPanel
           , div_ "kibitz-input"

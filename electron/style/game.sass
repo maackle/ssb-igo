@@ -1,0 +1,133 @@
+$panel-width: 300px
+*
+  box-sizing: border-box
+
+.game-content
+  position: relative
+  text-align: center
+  justify-content: center
+  align-items: center
+  display: flex
+  height: 100%
+  width: 100%
+  background: #aaa
+
+  .close
+    cursor: pointer
+    position: absolute
+    width: 40px
+    height: 40px
+    font-size: 40px
+    line-height: 1
+    border-radius: 50%
+    top: 5px
+    right: 5px
+    background: #eee
+    opacity: 0.5
+    // background: rgba(#eee, 0.5)
+    border: 1px solid #ccc
+    &:hover
+      // background: rgba(#eee, 1)
+      opacity: 1
+
+  .tenuki-board
+    flex: 0 1 auto
+    height: 100%
+    width: 100%
+
+  .panel
+    flex: 1 0 $panel-width
+    max-width: $panel-width + 200
+    display: flex
+    flex-direction: column
+    background: #ddd
+    height: 100%
+    border-left: 3px solid #c3c3c3
+
+  .players
+    display: flex
+    justify-content: space-evenly
+    align-items: flex-end
+    .player
+      position: relative
+      flex: 1 1
+      display: inline-block
+      padding: 10px
+      &:first-child
+        border-right: 1px solid #aaa
+      .name
+        font-weight: bold
+      .turn-notification
+        display: none
+        font-size: 0.75em
+        color: orange
+
+      &.their-turn
+        background: #eee
+      &.my-turn
+        background: #eee
+        .turn-notification
+          display: block
+
+    .vs
+      font-size: 1.25em
+      margin: 0 4px
+      vertical-align: middle
+
+  .game-info
+    display: flex
+    justify-content: space-evenly
+    align-items: center
+    border-top: 1px solid #aaa
+    border-bottom: 3px double #aaa
+    padding: 10px 0
+    .key
+      font-size: 0.75em
+    .move
+      font-weight: bold
+
+    .controls
+      flex: 2 1 auto
+      button
+        display: inline-block
+        margin: 10px
+        padding: 7px 10px
+        font-size: 0.75em
+        color: black
+        border-radius: 7px
+        &.pass
+          background: #9d6
+        &.resign
+          background: #d96
+        &[disabled]
+          background: grey
+    .datum
+      flex: 1 1 auto
+
+
+  .kibitz-container
+    text-align: left
+    flex: 1 1 auto
+    position: relative
+
+    .kibitz-input
+      display: flex
+      position: absolute
+      bottom: 0
+      left: 0
+      width: 100%
+      padding: 0.75rem
+      input
+        flex: 1 1 100%
+        padding: 0.75rem
+      button
+        flex: 0 0 auto
+
+    .kibitz
+      margin: 0.5rem
+      .author
+        display: inline-block
+        font-weight: bold
+        margin-right: 0.5rem
+      .message
+        display: inline
