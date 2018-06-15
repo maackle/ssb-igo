@@ -30,10 +30,15 @@ exports._createClient = function (element) {
             submitPlay: function submitPlay(y, x, cb) {
               callbacks.submitPlay({ x: x, y: y })();
               cb(true);
+            },
+            submitMarkDeadAt: function submitMarkDeadAt(y, x, stones, cb) {
+              console.log('submitMarkDeadAt', y, x, stones);
+              callbacks.submitMarkDeadAt({ x: x, y: y }, stones)();
+              cb(true);
             }
           };
-
-          var client = new tenuki.Client(Object.assign({ element: element, player: player, hooks: hooks }, terms));
+          var opts = Object.assign({ element: element, player: player, hooks: hooks }, { gameOptions: terms });
+          var client = new tenuki.Client(opts);
           return client;
         };
       };
@@ -59,17 +64,11 @@ exports.currentState = function (game) {
 exports.playPass = function (opts) {
   return function (game) {
     return function () {
-      return game.playPass(opts);
+      return game.pass(opts);
     };
   };
 };
-exports.playResign = function (opts) {
-  return function (game) {
-    return function () {
-      return game.playResign(opts);
-    };
-  };
-};
+// exports.playResign = opts => game => () => game.playResign(opts)
 exports.playAt = function (opts) {
   return function (_ref) {
     var x = _ref.x;
@@ -84,5 +83,10 @@ exports.playAt = function (opts) {
 exports.render = function (game) {
   return function () {
     return game.render();
+  };
+};
+exports.isOver = function (game) {
+  return function () {
+    return game.isOver();
   };
 };

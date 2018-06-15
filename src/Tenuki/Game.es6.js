@@ -12,12 +12,18 @@ exports._createClient = element => terms => player => callbacks => () => {
     submitPlay: (y, x, cb) => {
       callbacks.submitPlay({x,y})()
       cb(true)
+    },
+    submitMarkDeadAt: (y, x, stones, cb) => {
+      console.log('submitMarkDeadAt', y, x, stones)
+      callbacks.submitMarkDeadAt({x,y}, stones)()
+      cb(true)
     }
   }
-
-  const client = new tenuki.Client(
-    Object.assign({element, player, hooks}, terms)
+  const opts = Object.assign(
+    {element, player, hooks},
+    {gameOptions: terms}
   )
+  const client = new tenuki.Client(opts)
   return client
 }
 
@@ -28,7 +34,8 @@ exports.setMoveCallback = game => cb => () => {
 exports.getGame = client => client._game
 exports.currentState = game => game.currentState()
 
-exports.playPass = opts => game => () => game.playPass(opts)
-exports.playResign = opts => game => () => game.playResign(opts)
+exports.playPass = opts => game => () => game.pass(opts)
+// exports.playResign = opts => game => () => game.playResign(opts)
 exports.playAt = opts => ({x, y}) => game => () => game.playAt(y, x, opts)
 exports.render = game => () => game.render()
+exports.isOver = game => () => game.isOver()

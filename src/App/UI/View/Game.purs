@@ -3,31 +3,27 @@ module App.UI.View.Game where
 import Prelude
 
 import App.Common (div_)
-import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), KibitzStep(..), assignColors, assignColors', lastMoveKey, matchKey, myColor, nextMover)
-import App.IgoMsg (IgoMsg(..), StoneColor(..))
+import App.Flume (IndexedMatch(IndexedMatch), KibitzStep(KibitzStep), assignColors, lastMoveKey, matchKey, myColor, nextMover)
+import App.IgoMsg (IgoMove(Pass), IgoMsg(PlayMove))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, Model, userNameFromKey)
 import App.UI.Optics as O
 import App.UI.Routes (Route(..))
-import App.UI.View.Components (link, userKeyMarkup)
-import App.UI.View.MakeOffer (offerForm)
+import App.UI.View.Components (link)
 import DOM.Event.KeyboardEvent as KeyboardEvent
-import Data.Array (filter, intercalate, length, singleton)
-import Data.Array.NonEmpty (replicate)
-import Data.Foldable (find)
+import Data.Array (length)
 import Data.Lens as Lens
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as M
-import Debug.Trace (spy, trace, traceAny)
-import Spork.Html (classes)
 import Spork.Html as H
 import Tenuki.Game as Tenuki
 
 
 viewGame :: Model -> EzModel -> Maybe IndexedMatch -> H.Html Action
 viewGame model@{tenukiClient} ez@{db, whoami} maybeMatch = case maybeMatch of
-  Just match@(IndexedMatch {offerPayload}) ->
+  Just match@(IndexedMatch {offerPayload, moves}) ->
     let
+      {terms} = offerPayload
       gameDiv = H.div
         [ H.classes ["tenuki-board"]
         , H.ref (Just <<< (ManageTenukiGame match)) ]
@@ -60,8 +56,15 @@ viewGame model@{tenukiClient} ez@{db, whoami} maybeMatch = case maybeMatch of
         ]
 
       passButton active = H.button
-        [H.classes ["pass"], H.disabled (not active)]
-        [H.text "pass"]
+        [ H.classes ["pass"]
+        , H.disabled (not active)
+        , H.onClick $ H.always_ $ Publish $ PlayMove
+          { move: Pass
+          , lastMove: lastMoveKey match
+          , subjectiveMoveNum: -1
+          }
+        ]
+        [ H.text "pass" ]
       resignButton active = H.button
         [H.classes ["resign"], H.disabled (not active)]
         [H.text "resign"]
@@ -89,9 +92,9 @@ viewGame model@{tenukiClient} ez@{db, whoami} maybeMatch = case maybeMatch of
         in [ passButton active, resignButton active ]
 
       info =
-        [ datum "move" "101"
-        , datum "komi" "0.5"
-        , datum "hand." "2"
+        [ datum "move" $ show $ length moves
+        , datum "komi" $ show terms.komi
+        , datum "hand." $ show terms.handicap
         ]
 
     in div_ "game-content"
