@@ -32,8 +32,7 @@ exports._createClient = function (element) {
               cb(true);
             },
             submitMarkDeadAt: function submitMarkDeadAt(y, x, stones, cb) {
-              console.log('submitMarkDeadAt', y, x, stones);
-              callbacks.submitMarkDeadAt({ x: x, y: y }, stones)();
+              callbacks.submitMarkDeadAt({ x: x, y: y })(stones)();
               cb(true);
             }
           };
@@ -80,13 +79,26 @@ exports.playAt = function (opts) {
     };
   };
 };
+exports.toggleDead = function (opts) {
+  return function (_ref2) {
+    var x = _ref2.x;
+    var y = _ref2.y;
+    return function (game) {
+      return function () {
+        console.log('toggle toggle', x, y);
+        game.toggleDeadAt(y, x, opts);
+      };
+    };
+  };
+};
 exports.render = function (game) {
   return function () {
     return game.render();
   };
 };
 exports.isOver = function (game) {
-  return function () {
-    return game.isOver();
-  };
+  return game.isOver();
+};
+exports.getScore = function (game) {
+  return game.score();
 };

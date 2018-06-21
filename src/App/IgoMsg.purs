@@ -50,7 +50,12 @@ type PlayMovePayload =
 type KibitzPayload =
   { move :: MsgKey, text :: String }
 
-data IgoMove = PlayStone BoardPosition | Pass | Resign
+data IgoMove
+  = PlayStone BoardPosition
+  | Pass
+  | Resign
+  | ToggleDead BoardPosition
+  | Finalize
 
 type SsbIgoMsg = SsbMessage IgoMsg
 

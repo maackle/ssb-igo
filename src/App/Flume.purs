@@ -223,6 +223,7 @@ reduceFn (db) json =
                 newMove = IndexedMove payload {rootAccept} {key, author}
                 moveStep = MoveStep {move, key}
                 newMatch = match # unwrap >>> (\m -> m { moves = snoc m.moves moveStep }) >>> wrap
+                _ = traceAny {newMove, newMatch}
               in db { moves   = M.insert key newMove db.moves
                     , matches = M.insert rootAccept newMatch db.matches }
             Just err ->

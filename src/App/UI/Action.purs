@@ -30,7 +30,7 @@ import Data.Lens (set)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (unwrap, wrap)
 import Data.StrMap as M
-import Debug.Trace (spy, traceA, traceAnyA)
+import Debug.Trace (spy, traceA, traceAny, traceAnyA)
 import Halogen.VDom.DOM.Prop (ElemRef(..))
 import Spork.App (lift, purely)
 import Spork.App as App
@@ -69,24 +69,26 @@ publishFrom ident msg = do
   sbot <- maybe getClient' devClient ident
   Msg.publishMsg sbot msg
 
-dispatchBoardMove :: ∀ e. Model -> BoardPosition -> Msg.SA e Unit
-dispatchBoardMove model pos =
-  case model.route, ezify model of
-    ViewGame key, Just ez ->
-      case M.lookup key ez.db.matches of
-        Nothing ->
-          pure unit
-        Just match ->
-          let lastMove = lastMoveKey match
-              msg = Msg.PlayMove
-                      { lastMove
-                      , move: PlayStone pos
-                      , subjectiveMoveNum: -1
-                      }
-          in publishFrom model.devIdentity msg
-    _, _ -> pure unit
-  where
-    pub msg = E.runEffect $ E.Publish model.devIdentity msg Noop
+dispatchBoardMove :: ∀ e. Model -> IndexedMatch -> BoardPosition -> Msg.SA e Unit
+dispatchBoardMove {devIdentity} match pos =
+  let lastMove = lastMoveKey match
+      msg = Msg.PlayMove
+              { lastMove
+              , move: PlayStone pos
+              , subjectiveMoveNum: -1
+              }
+  in publishFrom devIdentity msg
+
+dispatchToggleDead :: ∀ e. Model -> IndexedMatch -> BoardPosition -> Msg.SA e Unit
+dispatchToggleDead {devIdentity} match pos =
+  let lastMove = lastMoveKey match
+      msg = Msg.PlayMove
+              { lastMove
+              , move: ToggleDead pos
+              , subjectiveMoveNum: -1
+              }
+  in publishFrom devIdentity msg
+
 
 
 
@@ -144,10 +146,12 @@ update model = case _ of
     Created el ->
       let
         color = myColor match =<< model.whoami
+        submitPlay pos =
+          launchAff_ $ dispatchBoardMove model match $ wrap pos
+        submitMarkDeadAt pos stones =
+          launchAff_ $ dispatchToggleDead model match $ wrap pos
         callbacks =
-          { submitPlay: launchAff_ <<< dispatchBoardMove model <<< wrap
-          , submitMarkDeadAt: const $ pure unit
-          }
+          { submitPlay , submitMarkDeadAt }
         effects = lift $ liftEff $ SetTenukiClient <$> Just <$> do
             client <- Tenuki.createClient el offerPayload.terms color callbacks
             let steps = moves <#> (_.move <<< unwrap)

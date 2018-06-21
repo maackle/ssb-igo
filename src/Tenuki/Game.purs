@@ -40,7 +40,7 @@ type TenukiGameState =
 
 type TenukiClientCallbacks e =
   { submitPlay :: BoardPositionData -> Eff e Unit
-  , submitMarkDeadAt :: BoardPositionData -> Eff e Unit
+  , submitMarkDeadAt :: BoardPositionData -> Array {} -> Eff e Unit
   }
 
 type PlayOpts = {render :: Boolean}
@@ -50,8 +50,10 @@ setGameState game moves = traverse_ runMove (spy moves) *> render game where
   opts = {render: false}
   runMove = case _ of
     Pass -> playPass opts game
-    Resign -> trace "TODO: resign" $ const $ pure unit
     PlayStone (BoardPosition pos) -> playAt opts pos game
+    ToggleDead (BoardPosition pos) -> toggleDead opts pos game
+    Resign -> trace "TODO: resign" $ const $ pure unit
+    Finalize -> trace "TODO: finalize" $ const $ pure unit
 
 
 createGame :: ∀ e. Element -> GameTerms -> Eff e TenukiGame
@@ -76,10 +78,11 @@ foreign import data TenukiClient :: Type
 foreign import _createGame :: ∀ e. Element -> TenukiTerms -> Eff e TenukiGame
 foreign import _createClient :: ∀ e. Element -> TenukiTerms -> String -> TenukiClientCallbacks e -> Eff e TenukiClient
 foreign import setMoveCallback :: ∀ e. TenukiGame -> (BoardPositionData -> Eff e Unit) -> Eff e Unit
-foreign import playPass :: ∀ e. PlayOpts -> TenukiGame -> Eff e Unit
--- foreign import playResign :: ∀ e. PlayOpts -> TenukiGame -> Eff e Unit
 foreign import playAt :: ∀ e. PlayOpts -> BoardPositionData -> TenukiGame -> Eff e Unit
+foreign import toggleDead :: ∀ e. PlayOpts -> BoardPositionData -> TenukiGame -> Eff e Unit
+foreign import playPass :: ∀ e. PlayOpts -> TenukiGame -> Eff e Unit
 foreign import render :: ∀ e. TenukiGame -> Eff e Unit
 foreign import currentState :: ∀ e. TenukiGame -> TenukiGameState
 foreign import getGame :: ∀ e. TenukiClient -> TenukiGame
+foreign import getScore :: ∀ e. TenukiGame -> {black :: Int, white :: Int}
 foreign import isOver :: ∀ e. TenukiGame -> Boolean

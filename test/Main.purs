@@ -5,7 +5,7 @@ import Prelude
 import App.DB.Main (ssbIgoPlugin)
 import App.IgoMsg (BoardPosition(BoardPosition), IgoMove(PlayStone), IgoMsg(AcceptMatch, OfferMatch, WithdrawOffer, AcknowledgeDecline, DeclineMatch, ExpireRequest, RequestMatch, PlayMove), MsgKey, OfferMatchPayload, RequestMatchPayload, StoneColor(Black), SsbIgoMsg, publishMsg')
 import App.UI.ClientQueries (getDb)
-import App.UI.Model (FlumeData, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..), addUserKey)
+import App.Flume (FlumeData, IndexedDecline(..), IndexedMatch(..), IndexedOffer(..), IndexedRequest(..), MoveStep(..), addUserKey)
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
@@ -117,16 +117,6 @@ main = do
 
   run [consoleReporter] do
     serverTests startSbot
-
-    describe "server" do
-      it "can connect" $ sesh testbot \sbot -> do
-        {id} <- whoami sbot
-        let s = props sbot
-        shouldEqual id s.id
-      it "has feeds" $ sesh testbot \sbot -> do
-        alice <- feed sbot
-        bob <- feed sbot
-        shouldNotEqual (alice # props # _.id) (bob # props # _.id)
 
     describe "client" do
       pending' "can connect" $ sesh fullbot \sbot -> do
