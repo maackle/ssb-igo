@@ -9,7 +9,7 @@ import Control.Monad.Eff (Eff)
 import Data.Argonaut (JObject, Json, fromObject, fromString, toString)
 import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
 import Data.Either (Either(..), fromRight)
-import Data.Generic (class Generic)
+import Data.Generic (class Generic, gShow)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.StrMap as M
@@ -73,6 +73,7 @@ type BoardPositionData = {x :: Int, y :: Int}
 
 derive instance genericIgoMsg :: Generic IgoMsg
 derive instance genericIgoMove :: Generic IgoMove
+instance showIgoMove :: Show IgoMove where show = gShow
 derive instance genericStoneColor :: Generic StoneColor
 derive instance genericBoardPosition :: Generic BoardPosition
 derive instance newtypeBoardPosition :: Newtype BoardPosition _

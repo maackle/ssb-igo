@@ -3,12 +3,13 @@ module App.Flume where
 import Prelude
 
 import App.Common (messageTypeString)
-import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchPayload, DeclineMatchFields, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseIgoMessage)
+import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchFields, DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseIgoMessage)
 import App.Utils (trace', upsert, (&))
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, fromObject, jsonNull, toObject, toString)
 import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
 import Data.Array (last, length, snoc)
+import Data.Array as Array
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..), either, hush)
 import Data.Foreign (Foreign, toForeign)
@@ -212,8 +213,7 @@ reduceFn (db) json =
 
     Tuple (PlayMove payload@{move, lastMove}) {author, key} ->
       case rootMatch lastMove of
-        Nothing ->
-          unsafePartial $ crashWith "invalid message chain"
+        Nothing -> trace "invalid message chain" $ const db
         Just match@(IndexedMatch {acceptMeta}) ->
           let rootAccept = acceptMeta.key
               moveError = validateMove match payload author
@@ -231,8 +231,7 @@ reduceFn (db) json =
 
     Tuple (Kibitz payload@{move, text}) {author} ->
       case rootMatch move of
-        Nothing ->
-          unsafePartial $ crashWith "Kibitz: invalid message chain"
+        Nothing -> trace "invalid message chain" $ const db
         Just match@(IndexedMatch {acceptMeta}) ->
           let
             newKibitz = spy $ KibitzStep {text, author}
@@ -252,23 +251,44 @@ reduceFn (db) json =
           M.lookup rootAccept db.matches
         _, _ -> Nothing  -- NB: also handles case of Just, Just, which is absurd
 
-    validateMove :: IndexedMatch -> PlayMovePayload -> UserKey -> Maybe String
-    validateMove match@(IndexedMatch {offerPayload, offerMeta, moves}) {move, lastMove} author =
-      validateLastMove <|> validatePlayer
-      where
-        {terms, myColor} = offerPayload
-        {handicap} = terms
-        {black, white} = getPlayers match
-        lastKey = lastMoveKey match
-        validateLastMove =
-          if lastKey == lastMove
-          then Nothing
-          else Just $ "move is not in response to last valid move! "
-                   <> author <> " || "
-                   <> lastKey
-        validatePlayer = case move of
+    validateMove
+      match@(IndexedMatch {offerPayload, offerMeta, moves})
+      payload@{move, lastMove}
+      author = validateLastMove <|> validateFinalization <|>
+        case move of
+          PlayStone _ -> validatePlayer
+          Pass -> validatePlayer
           Resign -> Nothing
-          _ -> if author == nextMover db match then Nothing else Just $ "not your turn to move! " <> author
+          ToggleDead _ -> validateEndMove
+          Finalize ->
+            case _.move <<< unwrap <$> last moves of
+              Just Finalize -> validatePlayer <|> validateEndMove
+              Just _ -> validateEndMove
+              Nothing -> validateEndMove
+        where
+          validateLastMove =
+            if lastKey == lastMove
+            then Nothing
+            else Just $ "move is not in response to last valid move! "
+                     <> author <> " || "
+                     <> lastKey
+            where lastKey = lastMoveKey match
+
+          validatePlayer =
+            if author == nextMover db match
+            then Nothing
+            else Just $ "not your turn to move! " <> author
+
+          validateEndMove =
+            if isMatchEnd match
+            then Nothing
+            else Just $ "can only play move at end of game: " <> show move
+
+          validateFinalization =
+            if isMatchFinalized match
+            then Just $ "match is finalized, no more moves possible!"
+            else Nothing
+
 
     getPlayers :: IndexedMatch -> {black :: UserKey, white :: UserKey}
     getPlayers (IndexedMatch {offerPayload, offerMeta}) =
@@ -294,6 +314,24 @@ nextMover db match@(IndexedMatch {offerPayload, offerMeta}) =
     method2 = case M.lookup (lastMoveKey match) db.moves of
                 Just (IndexedMove _ _ lastMeta) -> if author == lastMeta.author then opponentKey else author
                 Nothing -> firstMover
+
+isMatchEnd :: IndexedMatch -> Boolean
+isMatchEnd match@(IndexedMatch {moves}) =
+  let lastTwo = _.move <<< unwrap <$> Array.drop (Array.length moves - 2) moves
+  in case lastTwo of
+    [] -> false
+    [_] -> false
+    [Pass, Pass] -> true
+    [_, ToggleDead _] -> true
+    [_, Finalize] -> true
+    _ -> false
+
+isMatchFinalized :: IndexedMatch -> Boolean
+isMatchFinalized match@(IndexedMatch {moves}) =
+  let lastTwo = _.move <<< unwrap <$> Array.drop (Array.length moves - 2) moves
+  in case lastTwo of
+    [Finalize, Finalize] -> true
+    _ -> false
 
 mapFn :: MapFn
 mapFn json = if isValidMessage json then json else jsonNull
