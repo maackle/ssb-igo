@@ -46,7 +46,7 @@ type TenukiClientCallbacks e =
 type PlayOpts = {render :: Boolean}
 
 setGameState :: ∀ e. TenukiGame -> Array IgoMove -> Eff e Unit
-setGameState game moves = traverse_ runMove (spy moves) *> render game where
+setGameState game moves = traverse_ runMove moves *> render game where
   opts = {render: false}
   runMove = case _ of
     Pass -> playPass opts game

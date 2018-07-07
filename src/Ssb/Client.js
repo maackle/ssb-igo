@@ -1,12 +1,9 @@
-'use strict';
-
 var ssbClient = require('ssb-client');
 
-var _require = require('../../output/Ssb.Common/foreign');
-
-var exposeAff = _require.exposeAff;
-var exposeEff = _require.exposeEff;
-var exposePure = _require.exposePure;
+var _require = require('./ssb-common'),
+    exposeAff = _require.exposeAff,
+    exposeEff = _require.exposeEff,
+    exposePure = _require.exposePure;
 
 exports.props = exposePure(0, null);
 
@@ -15,6 +12,7 @@ exports.props = exposePure(0, null);
 exports.unboxPrivate = exposeEff(2, ['private', 'unbox']);
 
 //////////////// ASYNC
+
 
 exports._close = function (client) {
   return function (error, success) {
@@ -26,7 +24,8 @@ exports._getClient = function (config) {
   return function (error, success) {
     config.caps = {
       shs: config.shs,
-      sign: config.sign };
+      sign: config.sign
+    };
 
     var _client = null;
     ssbClient(config.keys, config, function (err, client) {
@@ -34,7 +33,6 @@ exports._getClient = function (config) {
       if (err) error(err);else success(client);
     });
     return function (cancelError, cancelerError, cancelerSuccess) {
-      console.log('CANCEL', _client);
       if (_client) {
         _client.close();
         cancelerSuccess();

@@ -21,15 +21,15 @@ render model =
   case ezify model of
     Nothing -> H.div [H.classes ["root-container"]]
       [ H.h1 [] [H.text "app loading..."]
-      , H.code []
-        [ H.text (unsafeStringify model)]
+      -- , H.code []
+      --   [ H.text (unsafeStringify model)]
       ]
     Just ez ->
       H.div [H.classes ["root-container"]]
-        [ Dev.devToolbar ez
-        , mainContent model ez
-        , H.code []
-          [ H.text (unsafeStringify model)]
+        -- Dev.devToolbar ez
+        [ mainContent model ez
+        -- , H.code []
+        --   [ H.text (unsafeStringify model)]
         ]
   where
     showDb = case model.flume of

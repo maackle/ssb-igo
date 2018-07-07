@@ -23,6 +23,9 @@ import Ssb.PullStream (PullStream)
 import Ssb.Server (createFeed, createFeed', createFeedRemote', toPlugin)
 import Ssb.Types (Sbot)
 
+main :: Eff () Foreign
+main = pure $ toForeign ssbIgoPlugin
+
 ssbIgoPlugin =
   { init: \sbot -> unsafePerformEff $ init sbot
   , name: "ssbIgo"

@@ -1,6 +1,6 @@
 const scuttlebot = require('scuttlebot')
 
-const {exposeAff, exposeEff} = require('../../output/Ssb.Common/foreign')
+const {exposeAff, exposeEff} = require('./ssb-common')
 
 exports._sbotBuilder = plugins => () => {
   const r = (sbot, p) => sbot.use(p)

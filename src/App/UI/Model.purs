@@ -32,7 +32,7 @@ initialModel :: Model
 initialModel =
   { flume: FlumeUnloaded
   , whoami: Nothing
-  , devIdentity: Just Alice
+  , devIdentity: Nothing  -- Just Alice
   , userKeys: M.empty
   , userNames: M.empty
   , scratchOffer:

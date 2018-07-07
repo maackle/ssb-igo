@@ -39,7 +39,7 @@ parsePayload json = do
 
 type AboutContent =
   { about :: UserKey
-  , name :: String
+  , name :: Maybe String
   }
 
 newtype AboutContentN = AboutContentN AboutContent

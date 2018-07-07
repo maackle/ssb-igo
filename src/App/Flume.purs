@@ -3,19 +3,18 @@ module App.Flume where
 import Prelude
 
 import App.Common (messageTypeString)
-import App.IgoMsg (AcceptMatchPayload, BoardPosition(..), DeclineMatchFields, DeclineMatchPayload, IgoMove(..), IgoMsg(..), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, SsbIgoMsg(..), StoneColor(..), parseIgoMessage)
-import App.Utils (trace', upsert, (&))
+import App.IgoMsg (AcceptMatchPayload, DeclineMatchFields, DeclineMatchPayload, IgoMove(Finalize, ToggleDead, Pass, PlayStone, Resign), IgoMsg(Kibitz, PlayMove, AcknowledgeDecline, DeclineMatch, AcceptMatch, WithdrawOffer, OfferMatch, ExpireRequest, RequestMatch), MsgKey, OfferMatchPayload, PlayMovePayload, RequestMatchPayload, StoneColor(Black, White), parseIgoMessage)
+import App.Utils (upsert, (&))
 import Control.Alt ((<|>))
 import Data.Argonaut (Json, fromObject, jsonNull, toObject, toString)
 import Data.Argonaut.Generic.Argonaut (decodeJson, encodeJson)
-import Data.Array (last, length, snoc)
+import Data.Array (filter, last, snoc)
 import Data.Array as Array
 import Data.Bifunctor (lmap)
-import Data.Either (Either(..), either, hush)
-import Data.Foreign (Foreign, toForeign)
+import Data.Either (either, hush)
 import Data.Function.Uncurried (Fn2)
 import Data.Generic (class Generic, gEq, gShow)
-import Data.Maybe (Maybe(..), fromJust, fromMaybe, maybe)
+import Data.Maybe (Maybe(Nothing, Just), maybe)
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Record as Record
 import Data.StrMap (StrMap, delete, fromFoldable, insert, lookup)
@@ -23,11 +22,7 @@ import Data.StrMap as M
 import Data.Symbol (SProxy(..))
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
-import Data.Tuple.Nested ((/\))
-import Debug.Trace (spy, trace, traceA, traceAny, traceAnyA)
-import Global.Unsafe (unsafeStringify)
-import Partial (crashWith)
-import Partial.Unsafe (unsafeCrashWith, unsafePartial)
+import Debug.Trace (trace)
 import Ssb.Types (UserKey, MessageKey)
 
 
@@ -223,7 +218,6 @@ reduceFn (db) json =
                 newMove = IndexedMove payload {rootAccept} {key, author}
                 moveStep = MoveStep {move, key}
                 newMatch = match # unwrap >>> (\m -> m { moves = snoc m.moves moveStep }) >>> wrap
-                _ = traceAny {newMove, newMatch}
               in db { moves   = M.insert key newMove db.moves
                     , matches = M.insert rootAccept newMatch db.matches }
             Just err ->
@@ -234,7 +228,7 @@ reduceFn (db) json =
         Nothing -> trace "invalid message chain" $ const db
         Just match@(IndexedMatch {acceptMeta}) ->
           let
-            newKibitz = spy $ KibitzStep {text, author}
+            newKibitz = KibitzStep {text, author}
             append arr = Just $ snoc arr newKibitz
           in db { matchKibitzes = upsert append acceptMeta.key [] db.matchKibitzes }
 
@@ -314,6 +308,14 @@ nextMover db match@(IndexedMatch {offerPayload, offerMeta}) =
     method2 = case M.lookup (lastMoveKey match) db.moves of
                 Just (IndexedMove _ _ lastMeta) -> if author == lastMeta.author then opponentKey else author
                 Nothing -> firstMover
+
+moveNumber :: IndexedMatch -> Int
+moveNumber match@(IndexedMatch {moves}) =
+  Array.length $ filter gameMove moves
+  where
+    gameMove (MoveStep {move}) = case move of
+      PlayStone _ -> true
+      _ -> false
 
 isMatchEnd :: IndexedMatch -> Boolean
 isMatchEnd match@(IndexedMatch {moves}) =

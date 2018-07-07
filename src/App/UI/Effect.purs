@@ -9,7 +9,6 @@ import App.UI.Model (DevIdentity)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (CONSOLE, log)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console as Eff
 import DOM (DOM)
 import DOM.Classy.Event (currentTarget)
 import DOM.Classy.Node (nodeValue)
@@ -53,7 +52,6 @@ runEffect = case _ of
     pure $ next who
   ReturnEventTarget event next -> liftEff do
     val <- nodeValue $ currentTarget event
-    Eff.log val
     pure $ next val
   RawEffect e -> e
   -- PublishPrivate msg recips next ->

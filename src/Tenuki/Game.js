@@ -1,14 +1,8 @@
-'use strict';
-
 var tenuki = require('tenuki');
 
 var unwrapEff = function unwrapEff(cb) {
   return function () {
-    for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    return cb.apply(undefined, args)();
+    return cb.apply(undefined, arguments)();
   };
 };
 
@@ -70,8 +64,8 @@ exports.playPass = function (opts) {
 // exports.playResign = opts => game => () => game.playResign(opts)
 exports.playAt = function (opts) {
   return function (_ref) {
-    var x = _ref.x;
-    var y = _ref.y;
+    var x = _ref.x,
+        y = _ref.y;
     return function (game) {
       return function () {
         return game.playAt(y, x, opts);
@@ -81,11 +75,10 @@ exports.playAt = function (opts) {
 };
 exports.toggleDead = function (opts) {
   return function (_ref2) {
-    var x = _ref2.x;
-    var y = _ref2.y;
+    var x = _ref2.x,
+        y = _ref2.y;
     return function (game) {
       return function () {
-        console.log('toggle toggle', x, y);
         game.toggleDeadAt(y, x, opts);
       };
     };

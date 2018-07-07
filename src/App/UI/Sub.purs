@@ -3,30 +3,23 @@ module App.UI.Sub where
 import Prelude hiding (sub)
 
 import App.Common (getClient')
-import App.IgoMsg (IgoMove, BoardPositionData)
-import App.UI.Action (Action)
 import App.UI.ClientQueries (devClient, getStream)
 import App.UI.Model (DevIdentity)
-import Control.Monad.Aff (Fiber, error, joinFiber, killFiber, launchAff, launchAff_)
-import Control.Monad.Aff.Console as Aff
+import Control.Monad.Aff (Fiber, error, killFiber, launchAff, launchAff_)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console (CONSOLE, info)
-import Control.Monad.Eff.Console as Eff
+import Control.Monad.Eff.Console (CONSOLE)
 import Data.Argonaut (Json)
 import Data.Foreign (toForeign)
-import Data.Maybe (Maybe(..), isJust, maybe)
+import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Traversable (traverse)
-import Debug.Trace (traceA, traceAny, traceAnyA)
 import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
 import Spork.EventQueue as EventQueue
 import Spork.Interpreter (Interpreter(..))
 import Ssb.Config (SSB)
-import Ssb.Friends (createFriendStream)
 import Ssb.PullStream (drainWith)
 import Ssb.Server (messagesByType)
-import Ssb.Types (SbotConn, MessageKey)
-import Tenuki.Game (TenukiGame, setMoveCallback)
+import Tenuki.Game (TenukiGame)
 
 data Sub a
   = IdentityFeeds (Maybe DevIdentity) (SubCallbacks a)
@@ -37,7 +30,7 @@ type SubCallbacks a = {igoCb :: (Json -> a), friendsCb :: (Json -> a)}
 
 -- type SubEffects eff = (console :: CONSOLE | eff)
 
-type FX fx = (ssb :: SSB, console :: CONSOLE | fx)
+type FX fx = (ssb :: SSB | fx)
 type E fx = Eff (FX fx)
 
 -- NOTE: couldn't use stepper here because can't directly return an `Eff fx Action`

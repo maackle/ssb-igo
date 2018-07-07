@@ -37,7 +37,6 @@ exports.playPass = opts => game => () => game.pass(opts)
 // exports.playResign = opts => game => () => game.playResign(opts)
 exports.playAt = opts => ({x, y}) => game => () => game.playAt(y, x, opts)
 exports.toggleDead = opts => ({x, y}) => game => () => {
-  console.log('toggle toggle', x,y);
   game.toggleDeadAt(y, x, opts)
 }
 exports.render = game => () => game.render()

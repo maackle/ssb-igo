@@ -1,5 +1,5 @@
 const ssbClient = require('ssb-client')
-const {exposeAff, exposeEff, exposePure} = require('../../output/Ssb.Common/foreign')
+const {exposeAff, exposeEff, exposePure} = require('./ssb-common')
 
 
 exports.props = exposePure(0, null)
@@ -35,7 +35,6 @@ exports._getClient = config => (error, success) => {
     }
   )
   return (cancelError, cancelerError, cancelerSuccess) => {
-    console.log("CANCEL", _client)
     if (_client) {
       _client.close()
       cancelerSuccess()

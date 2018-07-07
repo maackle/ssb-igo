@@ -1,5 +1,5 @@
 
-const {exposeAff, exposeEff} = require('../../output/Ssb.Common/foreign')
+const {exposeAff, exposeEff} = require('./ssb-common')
 
 exports.getStream =
   client => () =>

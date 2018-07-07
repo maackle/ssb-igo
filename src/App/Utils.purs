@@ -16,7 +16,7 @@ import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.StrMap (StrMap, lookup)
 import Data.StrMap as M
 import Data.Tuple (Tuple(..))
-import Debug.Trace (class DebugWarning, spy, trace)
+import Debug.Trace (class DebugWarning, trace)
 
 map_ :: forall m a b. Functor m => m b -> (b -> a) -> m a
 map_ = flip map

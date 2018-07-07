@@ -1,9 +1,6 @@
-'use strict';
-
-var _require = require('../../output/Ssb.Common/foreign');
-
-var exposeAff = _require.exposeAff;
-var exposeEff = _require.exposeEff;
+var _require = require('./ssb-common'),
+    exposeAff = _require.exposeAff,
+    exposeEff = _require.exposeEff;
 
 exports.getStream = function (client) {
   return function () {
@@ -16,10 +13,9 @@ exports._getDb = function (client) {
     return client.ssbIgo.rawGet(function (err, val) {
       return err ? fail(err) : pass(val);
     });
-  }
-
-  // exports._testFeed =
-  //   client => path => (fail, pass) =>
-  //     client.ssbIgo.rawTestFeed(path, (err, val) => err ? fail(err) : pass(val))
-  ;
+  };
 };
+
+// exports._testFeed =
+//   client => path => (fail, pass) =>
+//     client.ssbIgo.rawTestFeed(path, (err, val) => err ? fail(err) : pass(val))

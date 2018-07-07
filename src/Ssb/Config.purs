@@ -1,11 +1,8 @@
 module Ssb.Config where
 
-import Prelude
 
 import Control.Monad.Eff (Eff, kind Effect)
-import Data.Argonaut (class EncodeJson, Json, fromString, jsonEmptyObject, jsonNull, (:=), (~>))
-import Data.Argonaut.Generic.Argonaut (encodeJson)
-import Data.Generic (class Generic)
+import Data.Argonaut (Json, fromString, jsonEmptyObject, jsonNull, (:=), (~>))
 import Data.Maybe (Maybe(..))
 import Data.Record (insert)
 import Data.StrMap (StrMap)

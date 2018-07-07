@@ -112,14 +112,15 @@ update model = case _ of
           else model { flume = FlumeDb $ reduceFn flume mapped }
   UpdateFriends json ->
     case decodeJson json :: Either String AboutMessage of
-      Left reason -> {model, effects: lift $ Aff.log reason *> Aff.log (show json) *> pure Noop}
+      Left reason -> {model, effects: lift $ pure Noop}
       Right (AboutMessage {content}) ->
         let
-          name = case content.name of
-            "" -> Nothing
-            a -> Just a
+          name = content.name
           key = content.about
-          user = { name, key }
+          user = M.lookup key model.userKeys # case _ of
+            Nothing -> { name, key }
+            Just u -> maybe {name, key} (\name -> u { name = Just name}) name
+
         in purely $ model
             { userKeys = M.insert key user model.userKeys
             , userNames = maybe model.userNames (\n -> M.insert n user model.userNames) name
@@ -196,8 +197,8 @@ update model = case _ of
       effect = liftEff do
         case (f val) of
           -- Left err -> preventDefault event *> traceA err *> pure Noop
-          Left err -> traceA err *> (pure $ UpdateModel (set (O.scratchOffer <<< O.errorMsg) $ Just err))
-          Right f -> traceA "OK" *> pure $ UpdateModel f
+          Left err -> pure $ UpdateModel (set (O.scratchOffer <<< O.errorMsg) $ Just err)
+          Right f -> pure $ UpdateModel f
     in { model, effects: lift effect}
 
 

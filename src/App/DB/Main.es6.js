@@ -17,10 +17,7 @@ exports.flumeUse =
     sbot._flumeUse(indexName, view)
 
 exports.liveStream =
-  view => () => {
-    console.log('new stream')
-    return view.stream({live: true})
-  }
+  view => () => view.stream({live: true})
 
 exports._rawGet =
   view => {

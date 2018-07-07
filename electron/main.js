@@ -6,6 +6,7 @@ const BrowserWindow = electron.BrowserWindow
 
 const path = require('path')
 const url = require('url')
+const {startSbot} = require('./start-sbot-mainnet')
 
 require('electron-reload')(path.join(__dirname, 'ui'))
 
@@ -40,7 +41,10 @@ function createWindow () {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', () => {createWindow()})
+app.on('ready', () => {
+  const sbot = startSbot(8008)
+  createWindow()
+})
 
 // Quit when all windows are closed.
 app.on('window-all-closed', function () {

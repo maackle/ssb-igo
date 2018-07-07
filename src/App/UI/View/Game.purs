@@ -3,8 +3,8 @@ module App.UI.View.Game where
 import Prelude
 
 import App.Common (div_)
-import App.Flume (IndexedMatch(IndexedMatch), KibitzStep(KibitzStep), assignColors, lastMoveKey, matchKey, myColor, nextMover)
-import App.IgoMsg (IgoMove(Pass), IgoMsg(PlayMove))
+import App.Flume (IndexedMatch(IndexedMatch), KibitzStep(KibitzStep), assignColors, isMatchEnd, lastMoveKey, matchKey, moveNumber, myColor, nextMover)
+import App.IgoMsg (IgoMove(..), IgoMsg(PlayMove))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, Model, userNameFromKey)
 import App.UI.Optics as O
@@ -55,19 +55,28 @@ viewGame model@{tenukiClient} ez@{db, whoami} maybeMatch = case maybeMatch of
         , div_ "caps" [H.text $ "captures: " <> show blackCaps]
         ]
 
+      moveSubmitter move = H.always_ $ Publish $ PlayMove
+        { move
+        , lastMove: lastMoveKey match
+        , subjectiveMoveNum: -1
+        }
+
       passButton active = H.button
         [ H.classes ["pass"]
         , H.disabled (not active)
-        , H.onClick $ H.always_ $ Publish $ PlayMove
-          { move: Pass
-          , lastMove: lastMoveKey match
-          , subjectiveMoveNum: -1
-          }
+        , H.onClick $ moveSubmitter Pass
         ]
         [ H.text "pass" ]
-      resignButton active = H.button
-        [H.classes ["resign"], H.disabled (not active)]
-        [H.text "resign"]
+
+      resignButton = H.button
+        [ H.classes ["resign"] ]
+        [ H.text "resign" ]
+
+      finalizeButton = H.button
+        [ H.classes ["finalize"]
+        , H.onClick $ moveSubmitter Finalize
+        ]
+        [ H.text "done" ]
 
       kibitzes = maybe [] id $ M.lookup (matchKey match) db.matchKibitzes
       kibitzPanel = kibitzes <#> \(KibitzStep {text, author}) ->
@@ -88,11 +97,15 @@ viewGame model@{tenukiClient} ez@{db, whoami} maybeMatch = case maybeMatch of
         H.always_ $ SubmitKibitz move
 
       controls = div_ "controls"
-        let active = nextMover db match == whoami
-        in [ passButton active, resignButton active ]
+        let
+          active = nextMover db match == whoami
+          firstButton = if isMatchEnd match
+            then finalizeButton
+            else passButton active
+        in [ firstButton, resignButton ]
 
       info =
-        [ datum "move" $ show $ length moves
+        [ datum "move" $ show $ moveNumber match
         , datum "komi" $ show terms.komi
         , datum "hand." $ show terms.handicap
         ]

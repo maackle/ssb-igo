@@ -3,7 +3,7 @@ module App.UI.View.Dashboard where
 import Prelude
 
 import App.Common (div_)
-import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), assignColors')
+import App.Flume (IndexedMatch(..), IndexedOffer(IndexedOffer), IndexedRequest(IndexedRequest), assignColors', isMatchFinalized, moveNumber)
 import App.IgoMsg (IgoMsg(..), StoneColor(..))
 import App.UI.Action (Action(..))
 import App.UI.Model (EzModel, Model)
@@ -52,6 +52,12 @@ dashboard model ez@{db, whoami} =
         [ H.thead [] gameHeaders
         , H.tbody [] (map (gameRow model) otherGames)
         ]
+
+      , H.h2 [] [H.text "completed games"]
+      , H.table []
+        [ H.thead [] gameHeaders
+        , H.tbody [] (map (gameRow model) finalizedGames)
+        ]
       ]
     ]
   where
@@ -59,15 +65,21 @@ dashboard model ez@{db, whoami} =
     incomingOffers = M.values db.offers
       # filter \(IndexedOffer {opponentKey} _) -> opponentKey == whoami
 
+    finalizedGames :: Array IndexedMatch
+    finalizedGames = M.values db.matches # filter isMatchFinalized
+
+    normalGames = M.values db.matches # filter (not <<< isMatchFinalized)
+
     myGames :: Array IndexedMatch
-    myGames = M.values db.matches
+    myGames = normalGames
       # filter \(IndexedMatch {acceptMeta, offerMeta}) ->
         acceptMeta.author == whoami || offerMeta.author == whoami
 
     otherGames :: Array IndexedMatch
-    otherGames = M.values db.matches
+    otherGames = normalGames
       # filter \(IndexedMatch {acceptMeta, offerMeta}) ->
         not $ (acceptMeta.author == whoami || offerMeta.author == whoami)
+
 
 
 myRequest :: EzModel -> H.Html Action
@@ -132,11 +144,11 @@ gameHeaders =
 
 
 gameRow :: Model -> IndexedMatch -> (H.Html Action)
-gameRow model (IndexedMatch {offerPayload, acceptPayload, moves, offerMeta, acceptMeta}) =
+gameRow model match@(IndexedMatch {offerPayload, acceptPayload, moves, offerMeta, acceptMeta}) =
   H.tr []
     [ H.td [] [userKeyMarkup model black]
     , H.td [] [userKeyMarkup model white]
-    , H.td [] [H.text $ show $ length moves]
+    , H.td [] [H.text $ show $ moveNumber match]
     , H.td []
       [ link (ViewGame acceptMeta.key) H.button [class' "btn-main"] [H.text "view"]]
     ]

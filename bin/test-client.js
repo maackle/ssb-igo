@@ -10,7 +10,7 @@ const config = require('ssb-config/inject')('ssb', {
   path: path,
   // keys: keysMaster,
   host: "localhost",
-  port: 8088,
+  port: 8008,
   // master: keysMaster.id,
   // master: [keysMaster.id, keysAlice.id],
   caps: {

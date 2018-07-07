@@ -1,11 +1,8 @@
-'use strict';
-
 var scuttlebot = require('scuttlebot');
 
-var _require = require('../../output/Ssb.Common/foreign');
-
-var exposeAff = _require.exposeAff;
-var exposeEff = _require.exposeEff;
+var _require = require('./ssb-common'),
+    exposeAff = _require.exposeAff,
+    exposeEff = _require.exposeEff;
 
 exports._sbotBuilder = function (plugins) {
   return function () {

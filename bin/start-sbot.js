@@ -41,7 +41,7 @@ function startSbot (path, port) {
   return sbot
 }
 
-const main = startSbot('./ssb-data', 8088)
+const main = startSbot('./ssb-data', 8008)
 const devs = ['alice', 'bob', 'charlie'].map((name, i) => {
   const port = 8081 + i
   const sbot = startSbot(`./ssb-dev/${name}`, port)

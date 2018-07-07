@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "pulp build",
-    "bundle": "pulp build -O -I src --to dist/bundle.js -m App.UI.Main",
+    "bundle": "pulp build -O -I src --to dist/ui.js -m App.UI.Main && pulp build -O -I src --to dist/db.js -m App.DB.Main && cp output/Ssb.Common/foreign.js dist/ssb-common.js && echo \"Auto bundling done. Don't forget to manually add module.exports to db.js\"",
     "dev": "concurrently --raw --kill-others \"bin/watch-es6.sh\" \"sass --watch electron/style:electron/build\"",
     "electron": "electron ./electron/main.js",
     "sbot": "node bin/start-sbot.js",
@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "babel-preset-env": "^1.7.0",
     "concurrently": "^3.5.1",
     "electron": "^1.8.4",
     "electron-reload": "^1.2.2",
