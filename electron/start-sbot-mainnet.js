@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const pull = require('pull-stream')
 const ssbKeys = require('ssb-keys')
-const bundle = require('../dist/db.js')
+const bundle = require('./dist/db.js')
 const {ssbIgoPlugin} = bundle
 
 console.log(ssbIgoPlugin)

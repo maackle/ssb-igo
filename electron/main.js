@@ -8,7 +8,7 @@ const path = require('path')
 const url = require('url')
 const {startSbot} = require('./start-sbot-mainnet')
 
-require('electron-reload')(path.join(__dirname, 'ui'))
+// require('electron-reload')(path.join(__dirname, 'ui'))
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -35,6 +35,8 @@ function createWindow () {
     // when you should delete the corresponding element.
     mainWindow = null
   })
+
+  mainWindow.webContents.openDevTools()
 }
 
 

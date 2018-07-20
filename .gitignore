@@ -10,3 +10,4 @@ dist
 ssb-data
 ssb-test-data
 ssb-dev*
+release/
