@@ -17,6 +17,7 @@ import Spork.EventQueue (EventQueueInstance, EventQueueAccum)
 import Spork.EventQueue as EventQueue
 import Spork.Interpreter (Interpreter(..))
 import Ssb.Config (SSB)
+import Ssb.Friends (aboutStream)
 import Ssb.PullStream (drainWith)
 import Ssb.Server (messagesByType)
 import Tenuki.Game (TenukiGame)
@@ -77,7 +78,7 @@ interpreter = Interpreter $ EventQueue.withAccum spec where
     friendListener :: Maybe DevIdentity -> Handler eff -> EffFiber eff
     friendListener ident fn = launchAff do
       client <- maybe getClient' devClient ident
-      stream <- liftEff $ messagesByType client $ toForeign {type: "about", live: true}
+      stream <- liftEff $ aboutStream client
       drainWith stream fn
 
     setupListeners :: Maybe DevIdentity -> SubCallbacks o -> E eff (FiberArray eff)

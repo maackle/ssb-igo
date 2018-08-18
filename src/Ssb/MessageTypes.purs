@@ -2,13 +2,19 @@ module Ssb.MessageTypes where
 
 import Prelude
 
-import App.Utils (lookup', lookup_, toObject')
-import Data.Argonaut (class DecodeJson, Json, decodeJson, toNumber, toObject, toString)
+import App.Utils (lookup', lookup_, toArray', toObject')
+import Control.Alt ((<|>))
+import Data.Argonaut (class DecodeJson, Json, decodeJson, toArray, toNumber, toObject, toString)
 import Data.Argonaut.Generic.Aeson as G
+import Data.Array (head)
 import Data.Either (Either)
 import Data.Generic (class Generic)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..), maybe)
 import Data.Newtype (class Newtype, unwrap)
+import Data.StrMap (StrMap)
+import Data.StrMap as M
+import Data.Traversable (sequence)
+import Data.Tuple (Tuple(..))
 import Ssb.Types (UserKey)
 
 
@@ -53,3 +59,26 @@ instance decodeAboutMessage :: DecodeJson AboutMessage where
     payload@{content} <- parsePayload json
     about :: AboutContentN <- G.decodeJson content
     pure $ AboutMessage $ payload {content = unwrap about}
+
+type AboutStreamMessage = (
+  StrMap
+    { name :: Maybe String
+    , image :: Maybe String
+    }
+  )
+
+getAboutMap :: Json -> String -> Either String AboutStreamMessage
+getAboutMap json me = do
+  o <- toObject' json
+  r :: AboutStreamMessage <- sequence $ flip M.mapWithKey o $ \k j -> do
+    m <- toObject' j
+    let nameJson = do
+                m <- toObject =<< M.lookup "name" m
+                M.lookup me m <|> M.lookup k m
+    let imageJson = do
+                m <- toObject =<< M.lookup "image" m
+                M.lookup me m <|> M.lookup k m
+    let name = maybe Nothing (toString <=< head <=< toArray) nameJson
+    let image = maybe Nothing (toString <=< head <=< toArray) imageJson
+    pure {name, image}
+  pure r

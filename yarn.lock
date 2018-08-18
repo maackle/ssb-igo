@@ -1497,7 +1497,7 @@ flumeview-query@^6.0.0:
     pull-sink-through "0.0.0"
     pull-stream "^3.4.0"
 
-flumeview-reduce@^1.3.0, flumeview-reduce@^1.3.13, flumeview-reduce@^1.3.9:
+flumeview-reduce@^1.1.0, flumeview-reduce@^1.3.0, flumeview-reduce@^1.3.13, flumeview-reduce@^1.3.9:
   version "1.3.13"
   resolved "https://registry.yarnpkg.com/flumeview-reduce/-/flumeview-reduce-1.3.13.tgz#074f8e5dd874e2ae3d774703d47333d5c4f6952e"
   dependencies:
@@ -3335,6 +3335,13 @@ punycode@^1.4.1:
   version "1.4.1"
   resolved "https://registry.yarnpkg.com/punycode/-/punycode-1.4.1.tgz#c0d5a63b2718800ad8e1eb0fa5269c84dd41845e"
 
+purescript-ssb-util@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/purescript-ssb-util/-/purescript-ssb-util-0.1.0.tgz#b27a79e2197a54bc64256a606bfd6a2f7285a1b9"
+  dependencies:
+    lodash "^4.17.10"
+    ramda "^0.25.0"
+
 push-stream-to-pull-stream@^1.0.0:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/push-stream-to-pull-stream/-/push-stream-to-pull-stream-1.0.1.tgz#e43519da6f0ede715044330dcb830ed408d5332c"
@@ -3978,6 +3985,13 @@ split-string@^3.0.1, split-string@^3.0.2:
   dependencies:
     extend-shallow "^3.0.0"
 
+ssb-about@^0.1.2:
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/ssb-about/-/ssb-about-0.1.2.tgz#b1a1946065f7559528cebf1601957a183d4544c3"
+  dependencies:
+    flumeview-reduce "^1.3.9"
+    ssb-ref "^2.7.1"
+
 ssb-blobs@^1.1.4:
   version "1.1.5"
   resolved "https://registry.yarnpkg.com/ssb-blobs/-/ssb-blobs-1.1.5.tgz#f560727ebb1a205ffb3a7d929d7be3718f7f4922"
@@ -4011,6 +4025,13 @@ ssb-config@^2.0.0, ssb-config@^2.2.0:
     non-private-ip "^1.2.1"
     os-homedir "^1.0.1"
     rc "^1.1.6"
+
+ssb-contacts@^0.0.2:
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/ssb-contacts/-/ssb-contacts-0.0.2.tgz#d9451561838ccc358d32317c0e99ef84f3449870"
+  dependencies:
+    flumeview-reduce "^1.1.0"
+    ssb-ref "^2.7.1"
 
 ssb-ebt@^5.1.4:
   version "5.2.1"

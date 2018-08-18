@@ -51,7 +51,7 @@ ssbIgoPlugin =
       }
 
 flumeReducer :: FlumeReducer
-flumeReducer = mkFlumeReducer1 2 reducer mapFn codec initialDb
+flumeReducer = mkFlumeReducer 2 reducer mapFn initialDb
   where
 
     reducer =
@@ -61,6 +61,8 @@ flumeReducer = mkFlumeReducer1 2 reducer mapFn codec initialDb
         in encodeFlumeDb $ reduceFn encoded msg
 
     decode j = do
+      traceA "DECODING -> "
+      traceAnyA j
       dbJson <- M.lookup "value" =<< toObject j
       decodeFlumeDb dbJson
 
@@ -68,6 +70,7 @@ flumeReducer = mkFlumeReducer1 2 reducer mapFn codec initialDb
 
     resolve :: Maybe FlumeData -> FlumeData
     resolve m = maybe' (\_ -> unsafeCrashWith "cannot decode w/ flumeReducer codec") id m
+
     codec =
           { encode: encode
           , decode: decode >>> resolve

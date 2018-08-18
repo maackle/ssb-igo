@@ -23,19 +23,22 @@ import DOM.Classy.HTMLElement (fromHTMLElement)
 import DOM.Classy.Node (nodeValue)
 import DOM.HTML.HTMLInputElement (setValue, value)
 import DOM.Node.Types (Element)
-import Data.Argonaut (Json, decodeJson, jsonNull)
-import Data.Array (last)
-import Data.Either (Either(Right, Left))
+import Data.Argonaut (Json, decodeJson, jsonNull, stringify)
+import Data.Array (filter, last)
+import Data.Array as Array
+import Data.Either (Either(..))
 import Data.Lens (set)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..), isJust, maybe)
 import Data.Newtype (unwrap, wrap)
 import Data.StrMap as M
-import Debug.Trace (spy, traceA, traceAny, traceAnyA)
+import Data.Tuple (Tuple(..))
+import Debug.Trace (spy, trace, traceA, traceAny, traceAnyA)
 import Halogen.VDom.DOM.Prop (ElemRef(..))
+import Partial.Unsafe (unsafeCrashWith)
 import Spork.App (lift, purely)
 import Spork.App as App
 import Spork.Html (ElementRef)
-import Ssb.MessageTypes (AboutMessage(..))
+import Ssb.MessageTypes (AboutMessage(..), AboutStreamMessage, getAboutMap)
 import Ssb.Types (UserKey, MessageKey)
 import Tenuki.Game (TenukiClient, setGameState)
 import Tenuki.Game as Tenuki
@@ -46,6 +49,7 @@ data Action
   | SetRoute Route
   | UpdateFlume Json
   | UpdateFriends Json
+  | UpdateAbout String Json
   | UpdateIdentity {id :: UserKey}
   -- | UpdateScratch Event (String -> ScratchOffer)
   | CreateOffer OfferMatchPayload
@@ -125,6 +129,25 @@ update model = case _ of
             { userKeys = M.insert key user model.userKeys
             , userNames = maybe model.userNames (\n -> M.insert n user model.userNames) name
             }
+  UpdateAbout whoami json ->
+    case getAboutMap json whoami of
+      -- Left reason -> unsafeCrashWith $ "UpdateAbout didn't work :( " <> reason
+      Left reason -> {model, effects: lift $ pure Noop}
+      Right abouts ->
+        let
+          pairs :: Array (Tuple String {name :: Maybe String, image :: Maybe String})
+          pairs = M.toUnfoldable abouts
+          userKeys = abouts # M.mapWithKey \key {name} -> {key, name}
+          userNames :: M.StrMap {name :: Maybe String, key :: String}
+          userNames = pairs
+            >>= (\(Tuple key {name}) ->
+                    maybe [] (\n -> [Tuple key {key, name: Just n}]) name
+                )
+            # M.fromFoldable
+        in purely $ model
+          { userKeys = userKeys
+          , userNames = userNames }
+
   -- UpdateScratch event f ->
   --   let val = target node
   --   in purely $ model { scratchOffer = f model.scratchOffer }

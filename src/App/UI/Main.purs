@@ -14,11 +14,7 @@ import App.UI.View as View
 import Control.Monad.Aff (Aff, Error)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE, error) as Eff
-import DOM (DOM)
 import Data.Array (singleton)
-import Data.StrMap as M
-import Data.Tuple (Tuple(..))
-import Debug.Trace (traceA)
 import Routing.Hash (matches)
 import Spork.App as App
 import Spork.Interpreter (Interpreter, basicAff, merge)
@@ -29,7 +25,8 @@ subs :: Model -> App.Batch Sub Action
 subs model@{devIdentity} =
   App.batch $ identityFeeds <> games
   where
-    identityFeeds = singleton $ IdentityFeeds devIdentity {igoCb: UpdateFlume, friendsCb: UpdateFriends}
+    -- NB: Need to hook in whoami to get proper names with UpdateAbout
+    identityFeeds = singleton $ IdentityFeeds devIdentity {igoCb: UpdateFlume, friendsCb: UpdateAbout "TODO"}
     games = []
     -- games = case tenukiClient of
     --   Just game -> singleton $ MoveListener game (dispatchBoardMove model <<< wrap)

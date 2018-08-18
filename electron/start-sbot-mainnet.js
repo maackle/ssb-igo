@@ -13,6 +13,8 @@ const sbotBuilder =
   .use(require("scuttlebot/plugins/master"))
   .use(require("scuttlebot/plugins/gossip"))
   .use(require("scuttlebot/plugins/replicate"))
+  .use(require("ssb-about"))
+  .use(require("ssb-contacts"))
   .use(require("ssb-private"))
   .use(require("ssb-friends"))
   .use(ssbIgoPlugin)
