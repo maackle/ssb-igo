@@ -119,22 +119,20 @@ viewGame model@{tenukiClient} ez@{db, whoami} maybeMatch = case maybeMatch of
             case myColor match whoami of
               Just _ -> [controls] <> info
               Nothing -> info
-        , div_ "kibitz-container"
-          [ div_ "kibitzes" kibitzPanel
-          , div_ "kibitz-input"
-            [ H.input
-              [ H.type_ H.InputText
-              , H.placeholder "Type to talk..."
-              -- , H.onValueInput handleKibitzInput
-              , H.onKeyPress handleKibitzEnter
-              , H.ref $ Just <<< ManageRef "kibitzInput"
-              ]
-            , H.button
-              [ H.onClick handleKibitzSend ]
-              [ H.text "Chat" ]
+        , div_ "kibitzes" kibitzPanel
+        , div_ "kibitz-input"
+          [ H.input
+            [ H.type_ H.InputText
+            , H.placeholder "Type to talk..."
+            -- , H.onValueInput handleKibitzInput
+            , H.onKeyPress handleKibitzEnter
+            , H.ref $ Just <<< ManageRef "kibitzInput"
             ]
+          , H.button
+            [ H.onClick handleKibitzSend ]
+            [ H.text "Chat" ]
           ]
-      ]
+        ]
       , link Dashboard H.a [H.classes ["close"]] [H.text "×"]
       ]
   Nothing -> H.text "NO GAME FOUND"

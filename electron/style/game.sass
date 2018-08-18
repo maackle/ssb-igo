@@ -105,29 +105,27 @@ $panel-width: 300px
       flex: 1 1 auto
 
 
-  .kibitz-container
-    text-align: left
-    flex: 1 1 auto
-    position: relative
 
-    .kibitz-input
-      display: flex
-      position: absolute
-      bottom: 0
-      left: 0
-      width: 100%
+  .kibitz-input
+    display: flex
+    width: 100%
+    padding: 0.75rem
+    input
+      flex: 1 1 100%
       padding: 0.75rem
-      input
-        flex: 1 1 100%
-        padding: 0.75rem
-      button
-        flex: 0 0 auto
+    button
+      flex: 0 0 auto
 
-    .kibitz
-      margin: 0.5rem
-      .author
-        display: inline-block
-        font-weight: bold
-        margin-right: 0.5rem
-      .message
-        display: inline
+  .kibitzes
+    flex: 1 1
+    overflow-y: auto
+    text-align: left
+
+  .kibitz
+    margin: 0.5rem
+    .author
+      display: inline-block
+      font-weight: bold
+      margin-right: 0.5rem
+    .message
+      display: inline

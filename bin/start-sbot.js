@@ -41,42 +41,4 @@ function startSbot (path, port) {
   return sbot
 }
 
-const main = startSbot('./ssb-data', 8008)
-const devs = ['alice', 'bob', 'charlie'].map((name, i) => {
-  const port = 8081 + i
-  const sbot = startSbot(`./ssb-dev/${name}`, port)
-  sbot.port = port
-  sbot.name = name
-  return sbot
-})
-
-if (process.argv[2]) {
-  let pubs = 0
-  console.log("Setting up follow graph")
-  devs.forEach(dev1 => {
-    dev1.publish({
-      type: 'about',
-      about: dev1.id,
-      name: dev1.name,
-    }, () => {})
-    devs.forEach(dev2 => {
-      if (dev1.id !== dev2.id) {
-        console.log(`${dev1.name} => ${dev2.name}`)
-        dev1.gossip.enable('local', (err, blah) => {
-          dev1.gossip.add({
-            host: 'localhost',
-            port: dev2.port,
-            key: dev2.id,
-          })
-        })
-        dev1.publish({
-          type: 'contact',
-          contact: dev2.id,
-          following: true,
-        }, () => {})//, (err, msg) => {if (++pubs == 6) feed0()})
-      }
-    })
-  })
-} else {
-
-}
+const main = startSbot('~/.ssb', 8008)

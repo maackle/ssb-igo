@@ -18,6 +18,7 @@ import DOM (DOM)
 import Data.Array (singleton)
 import Data.StrMap as M
 import Data.Tuple (Tuple(..))
+import Debug.Trace (traceA)
 import Routing.Hash (matches)
 import Spork.App as App
 import Spork.Interpreter (Interpreter, basicAff, merge)
@@ -52,7 +53,6 @@ handleException e = Eff.error $ show e
 
 main ∷ Eff (FX) Unit
 main = do
-
   inst <-
     App.makeWithSelector
       (effectInterpreter `merge` Sub.interpreter)

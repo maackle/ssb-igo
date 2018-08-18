@@ -1,5 +1,5 @@
 
-const {exposeAff, exposeEff} = require('./ssb-common')
+const {exposeAff, exposeEff} = require('purescript-ssb-util')
 
 exports.getStream =
   client => () =>

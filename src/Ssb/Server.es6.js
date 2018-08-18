@@ -1,6 +1,6 @@
 const scuttlebot = require('scuttlebot')
 
-const {exposeAff, exposeEff} = require('./ssb-common')
+const {exposeAff, exposeEff} = require('purescript-ssb-util')
 
 exports._sbotBuilder = plugins => () => {
   const r = (sbot, p) => sbot.use(p)

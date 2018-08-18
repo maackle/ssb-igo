@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "build": "pulp build",
-    "bundle": "pulp build -O -I src --to dist/ui.js -m App.UI.Main && pulp build -O -I src --to dist/db.js -m App.DB.Main && cp output/Ssb.Common/foreign.js dist/ssb-common.js && echo \"Auto bundling done. Don't forget to manually add module.exports to db.js\"",
+    "links": "ln -s ../../output/App.UI.Main electron/dist/ui.js && ln -s ../../output/App.DB.Main electron/dist/db.js",
+    "bundle": "pulp build -O -I src --to electron/dist/ui.js -m App.UI.Main && pulp build -O -I src --to electron/dist/db.js -m App.DB.Main && echo \"Auto bundling done. Don't forget to manually add module.exports to db.js\"",
     "dev": "concurrently --raw --kill-others \"bin/watch-es6.sh\" \"sass --watch electron/style:electron/build\"",
     "electron": "electron ./electron/main.js",
     "sbot": "node bin/start-sbot.js",

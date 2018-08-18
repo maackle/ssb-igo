@@ -1,6 +1,6 @@
 var ssbClient = require('ssb-client');
 
-var _require = require('./ssb-common'),
+var _require = require('purescript-ssb-util'),
     exposeAff = _require.exposeAff,
     exposeEff = _require.exposeEff,
     exposePure = _require.exposePure;

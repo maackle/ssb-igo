@@ -51,7 +51,7 @@ ssbIgoPlugin =
       }
 
 flumeReducer :: FlumeReducer
-flumeReducer = mkFlumeReducer1 "0.2" reducer mapFn codec initialDb
+flumeReducer = mkFlumeReducer1 2 reducer mapFn codec initialDb
   where
 
     reducer =
@@ -63,9 +63,8 @@ flumeReducer = mkFlumeReducer1 "0.2" reducer mapFn codec initialDb
     decode j = do
       dbJson <- M.lookup "value" =<< toObject j
       decodeFlumeDb dbJson
-    encode j = unsafePartial $ fromJust $ do
-      db <- M.lookup "value" =<< toObject j
-      pure $ db # unsafeStringify
+
+    encode j = unsafeStringify j
 
     resolve :: Maybe FlumeData -> FlumeData
     resolve m = maybe' (\_ -> unsafeCrashWith "cannot decode w/ flumeReducer codec") id m
@@ -78,8 +77,8 @@ type Codec a = {decode :: Json -> a, encode :: Json -> String}
 
 foreign import data FlumeReducer :: Type
 foreign import data FlumeView :: Type
-foreign import mkFlumeReducer :: String -> ReduceFnImpl -> MapFn -> FlumeData -> FlumeReducer
-foreign import mkFlumeReducer1 :: String -> ReduceFnImpl -> MapFn -> Codec FlumeData -> FlumeData -> FlumeReducer
+foreign import mkFlumeReducer :: Int -> ReduceFnImpl -> MapFn -> FlumeData -> FlumeReducer
+foreign import mkFlumeReducer1 :: Int -> ReduceFnImpl -> MapFn -> Codec FlumeData -> FlumeData -> FlumeReducer
 foreign import flumeUse :: ∀ fx. Sbot -> String -> FlumeReducer -> Eff (ssb :: SSB | fx) FlumeView
 foreign import liveStream :: ∀ fx. FlumeView -> Eff (ssb :: SSB | fx) PullStream
 foreign import _rawGet :: FlumeView -> (FlumeData -> Unit)   -- NOTE: the FFI here is hosed

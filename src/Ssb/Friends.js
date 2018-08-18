@@ -1,4 +1,4 @@
-var _require = require('./ssb-common'),
+var _require = require('purescript-ssb-util'),
     exposeAff = _require.exposeAff,
     exposeEff = _require.exposeEff;
 
