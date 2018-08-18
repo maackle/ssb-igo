@@ -1,4 +1,4 @@
-module App.UI.Main where
+module App.UI.Main (main) where
 
 import Prelude
 

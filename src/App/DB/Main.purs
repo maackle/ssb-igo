@@ -1,4 +1,4 @@
-module App.DB.Main where
+module App.DB.Main (main, ssbIgoPlugin) where
 
 import Prelude
 

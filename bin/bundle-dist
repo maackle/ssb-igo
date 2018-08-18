@@ -1,0 +1,6 @@
+rm electron/dist/*
+
+pulp build -O -I src --to electron/dist/ui.js -m App.UI.Main \
+&& pulp build -O -I src --to electron/dist/db.js -m App.DB.Main \
+&& echo "module.exports = {main: PS['App.UI.Main'].main};" >> "electron/dist/ui.js" \
+&& echo "module.exports = {ssbIgoPlugin: PS['App.DB.Main'].ssbIgoPlugin};" >> "electron/dist/db.js"
